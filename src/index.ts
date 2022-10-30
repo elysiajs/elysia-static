@@ -1,4 +1,4 @@
-import type { Plugin } from 'kingworld'
+import type KingWorld from 'kingworld'
 
 import { readdirSync, existsSync } from 'fs'
 import { join } from 'path'
@@ -18,49 +18,49 @@ const getFiles = (dir: string) => {
     return files
 }
 
-const staticPlugin: Plugin<{
-    /**
-     * @default "public"
-     *
-     * Path to expose as public path
-     */
-    path?: string
-    /**
-     * @default '/public'
-     *
-     * Path prefix to create virtual mount path for the static directory
-     */
-    prefix?: string
-    /**
-     * @default 1024
-     *
-     * If total files exceed this number,
-     * file will be handled via wildcard instead of static route
-     * to reduce memory usage
-     */
-    staticLimit?: number
-    /**
-     * @default false
-     *
-     * If set to true, file will always use static path instead
-     */
-    alwaysStatic?: boolean
-    /**
-     * @default [] `Array<string | RegExp>`
-     *
-     * Array of file to ignore publication.
-     * If one of the patters is matched,
-     * file will not be exposed.
-     */
-    ignorePatterns?: Array<string | RegExp>
-}> = (
-    app,
+const staticPlugin = (
+    app: KingWorld,
     {
         path = 'public',
         prefix = '/public',
         staticLimit = 1024,
         alwaysStatic = false,
         ignorePatterns = []
+    }: {
+        /**
+         * @default "public"
+         *
+         * Path to expose as public path
+         */
+        path?: string
+        /**
+         * @default '/public'
+         *
+         * Path prefix to create virtual mount path for the static directory
+         */
+        prefix?: string
+        /**
+         * @default 1024
+         *
+         * If total files exceed this number,
+         * file will be handled via wildcard instead of static route
+         * to reduce memory usage
+         */
+        staticLimit?: number
+        /**
+         * @default false
+         *
+         * If set to true, file will always use static path instead
+         */
+        alwaysStatic?: boolean
+        /**
+         * @default [] `Array<string | RegExp>`
+         *
+         * Array of file to ignore publication.
+         * If one of the patters is matched,
+         * file will not be exposed.
+         */
+        ignorePatterns?: Array<string | RegExp>
     } = {
         path: 'public',
         prefix: '/public',
@@ -84,11 +84,12 @@ const staticPlugin: Plugin<{
         files.forEach((file) => {
             if (shouldIgnore(file)) return
 
-            app.get(`/${join(prefix, file.replace(`${path}/`, ''))}`, () =>
-                Bun.file(file)
+            app.get(
+                `/${join(prefix, file.replace(`${path}/`, ''))}`,
+                () => new Response(Bun.file(file))
             )
         })
-    else
+    else {
         app.get<{
             params: {
                 '*': string
@@ -102,11 +103,12 @@ const staticPlugin: Plugin<{
                 })
 
             return existsSync(file)
-                ? Bun.file(file)
+                ? new Response(Bun.file(file))
                 : new Response('Not Found', {
                       status: 404
                   })
         })
+    }
 
     return app
 }
