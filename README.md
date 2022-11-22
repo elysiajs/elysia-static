@@ -12,7 +12,7 @@ import { KingWorld } from 'kingworld'
 import { staticPlugin } from '@kingworldjs/static'
 
 const app = new KingWorld()
-    .use(staticPlugin)
+    .use(staticPlugin())
     .listen(8080)
 ```
 
