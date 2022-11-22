@@ -8,7 +8,7 @@ specifiers:
   '@types/node': ^18.11.7
   bun-types: ^0.2.2
   eslint: ^8.26.0
-  kingworld: 0.0.0-experimental.28
+  kingworld: 0.0.0-experimental.30
   nodemon: ^2.0.20
   typescript: ^4.8.4
 
@@ -20,7 +20,7 @@ devDependencies:
   '@types/node': 18.11.7
   bun-types: 0.2.2
   eslint: 8.26.0
-  kingworld: 0.0.0-experimental.28
+  kingworld: 0.0.0-experimental.30
   nodemon: 2.0.20
   typescript: 4.8.4
 
@@ -63,13 +63,6 @@ packages:
     resolution: {integrity: sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==}
     dev: true
 
-  /@medley/router/0.2.1:
-    resolution: {integrity: sha512-mdvS1spIxmZoUbTdYmWknHtwm72WwrGNoQCDd4RTvcXJ9G6XThxeC3g+cpOf6Fw6vIERHt50pYiJpsk5XTJQ5w==}
-    engines: {node: '>=8'}
-    dependencies:
-      object-treeify: 1.1.33
-    dev: true
-
   /@nodelib/fs.scandir/2.1.5:
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -89,10 +82,6 @@ packages:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.13.0
-    dev: true
-
-  /@saltyaom/trek-router/0.0.7:
-    resolution: {integrity: sha512-59391o76kGiMT5uYkA3B5wMoseLrpICiWem5pt8vg2RfxfSXwdLLSijp9xRUBhY6oHSYKwWr+If5bsLIQ/cbUw==}
     dev: true
 
   /@swc/cli/0.1.57_@swc+core@1.3.11:
@@ -283,10 +272,6 @@ packages:
     resolution: {integrity: sha512-COUnqfB2+ckwXXSFInsFdOAWQzCCx+a5hq2ruyj+Vjund94RJQd4LG2u9hnvJrTgunKAaax7ancBYlDrNYxA0g==}
     dev: true
 
-  /@types/json-schema/7.0.11:
-    resolution: {integrity: sha512-wOuvG1SN4Us4rez+tylwwwCV1psiNVOkJeM3AUWUNWg/jDQY2+HE/444y5gc+jBmRqASOm2Oeh5c1axHobwRKQ==}
-    dev: true
-
   /@types/node/18.11.7:
     resolution: {integrity: sha512-LhFTglglr63mNXUSRYD8A+ZAIu5sFqNJ4Y2fPuY7UlrySJH87rRRlhtVmMHplmfk5WkoJGmDjE9oiTfyX94CpQ==}
     dev: true
@@ -315,15 +300,6 @@ packages:
       fast-deep-equal: 3.1.3
       fast-json-stable-stringify: 2.1.0
       json-schema-traverse: 0.4.1
-      uri-js: 4.4.1
-    dev: true
-
-  /ajv/8.11.0:
-    resolution: {integrity: sha512-wGgprdCvMalC0BztXvitD2hC04YffAvtsUn93JbGXYLAtCUO4xd17mCCZQxUOItiBwZvJScWo8NIvQMQ71rdpg==}
-    dependencies:
-      fast-deep-equal: 3.1.3
-      json-schema-traverse: 1.0.0
-      require-from-string: 2.0.2
       uri-js: 4.4.1
     dev: true
 
@@ -782,33 +758,21 @@ packages:
       argparse: 2.0.1
     dev: true
 
-  /json-schema-to-ts/2.5.5:
-    resolution: {integrity: sha512-GFD5t0fUnX/B0gE9xbHjxv2BwFXRJND2+OKoLoMElJ3XRJ7dOBlLT7KXpg96aETeZ0RJbAZOfqHALBf5k4aIIA==}
-    dependencies:
-      '@types/json-schema': 7.0.11
-      ts-algebra: 1.1.1
-      ts-toolbelt: 9.6.0
-    dev: true
-
   /json-schema-traverse/0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
-    dev: true
-
-  /json-schema-traverse/1.0.0:
-    resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
     dev: true
 
   /json-stable-stringify-without-jsonify/1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
     dev: true
 
-  /kingworld/0.0.0-experimental.28:
-    resolution: {integrity: sha512-oZ4vhYdpC5igL4QfFsM6pw0ahLMkAAlg9QBvVyFEMR7c8I+6BTRJPb/MpC75hLgS8zzfjBaUFebyYdFvp9OKBw==}
+  /kingworld/0.0.0-experimental.30:
+    resolution: {integrity: sha512-0+9EFJKJ6KCYJXHWbfKOkrx0ZtwBuP3PK8nCAvJn35OnwonriYTndz4K5sUfvlvhX/V8zijtgPGB32yo/7XnEg==}
+    peerDependencies:
+      ajv: '>=8.0.0'
+      zod: '>=3.0.0'
     dependencies:
-      '@medley/router': 0.2.1
-      '@saltyaom/trek-router': 0.0.7
-      ajv: 8.11.0
-      json-schema-to-ts: 2.5.5
+      zod-to-json-schema: 3.18.1
     dev: true
 
   /levn/0.4.1:
@@ -888,11 +852,6 @@ packages:
   /normalize-path/3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
-    dev: true
-
-  /object-treeify/1.1.33:
-    resolution: {integrity: sha512-EFVjAYfzWqWsBMRHPMAXLCDIJnpMhdWAqR7xG6M6a2cs6PMFpl/+Z20w9zDW4vkxOFfddegBKq9Rehd0bxWE7A==}
-    engines: {node: '>= 10'}
     dev: true
 
   /once/1.4.0:
@@ -982,11 +941,6 @@ packages:
   /regexpp/3.2.0:
     resolution: {integrity: sha512-pq2bWo9mVD43nbts2wGv17XLiNLya+GklZ8kaDLV2Z08gDCsGpnKn9BFMepvWuHCbyVvY7J5o5+BVvoQbmlJLg==}
     engines: {node: '>=8'}
-    dev: true
-
-  /require-from-string/2.0.2:
-    resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
-    engines: {node: '>=0.10.0'}
     dev: true
 
   /resolve-from/4.0.0:
@@ -1095,16 +1049,6 @@ packages:
       nopt: 1.0.10
     dev: true
 
-  /ts-algebra/1.1.1:
-    resolution: {integrity: sha512-W43a3/BN0Tp4SgRNERQF/QPVuY1rnHkgCr/fISLY0Ycu05P0NWPYRuViU8JFn+pFZuY6/zp9TgET1fxMzppR/Q==}
-    dependencies:
-      ts-toolbelt: 9.6.0
-    dev: true
-
-  /ts-toolbelt/9.6.0:
-    resolution: {integrity: sha512-nsZd8ZeNUzukXPlJmTBwUAuABDe/9qtVDelJeT/qW0ow3ZS3BsQJtNkan1802aM9Uf68/Y8ljw86Hu0h5IUW3w==}
-    dev: true
-
   /type-check/0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
@@ -1153,4 +1097,10 @@ packages:
   /yocto-queue/0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+    dev: true
+
+  /zod-to-json-schema/3.18.1:
+    resolution: {integrity: sha512-YFP4dAZR2GHDkTOZL7E7p2E3/yoUZeB5RD797JEpJTyh/L+9WvIK/tEMuF+MhzDPhQWXlkSugxmO8nbdXjJKYA==}
+    peerDependencies:
+      zod: ^3.18.0
     dev: true

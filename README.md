@@ -8,33 +8,33 @@ bun add @kingworldjs/static
 
 ## Example
 ```typescript
-import KingWorld from 'kingworld'
-import staicFolder from '@kingworldjs/static'
+import { KingWorld } from 'kingworld'
+import { staticPlugin } from '@kingworldjs/static'
 
 const app = new KingWorld()
-    .use(staicFolder)
+    .use(staticPlugin)
     .listen(8080)
 ```
 
 ## Config
-Below is an available config for static plugin.
+Below is an available config for a static plugin.
 
 ### path
 @default "public"
 
-Path to expose as public path
+Path to expose as a public path
 
 ### prefix
 @default '/public'
 
-Path prefix to create virtual mount path for the static directory
+Path prefix to create a virtual mount path for the static directory
 
 ### staticLimit
 @defualt 1024
 
-If total files exceed this number, file will be handled via wildcard instead of static route to reduce memory usage
+If total files exceed this number, the file will be handled via wildcard instead of the static route to reduce memory usage
 
 ### alwaysStatic
 @default boolean
 
-If set to true, file will always use static path instead
+If set to true, the file will always use a static path instead

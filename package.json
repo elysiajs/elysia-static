@@ -1,7 +1,7 @@
 {
   "name": "@kingworldjs/static",
   "description": "Plugin for kingworld for serving static folder.",
-  "version": "0.0.0-experimental.1",
+  "version": "0.0.0-experimental.2",
   "author": {
     "name": "saltyAom",
     "url": "https://github.com/SaltyAom",
@@ -24,12 +24,12 @@
     "@types/node": "^18.11.7",
     "bun-types": "^0.2.2",
     "eslint": "^8.26.0",
-    "kingworld": "0.0.0-experimental.28",
+    "kingworld": "0.0.0-experimental.51",
     "nodemon": "^2.0.20",
     "typescript": "^4.8.4"
   },
   "peerDependencies": {
-    "kingworld": ">= 0.0.0-experimental.14"
+    "kingworld": ">= 0.0.0-experimental.51"
   },
   "bugs": "https://github.com/SaltyAom/kingworld-static/issues",
   "homepage": "https://github.com/saltyaom/kingworld-static",
