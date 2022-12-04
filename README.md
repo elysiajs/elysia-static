@@ -1,17 +1,17 @@
-# @kingworldjs/static
-Plugin for [kingworld](https://github.com/saltyaom/kingworld) for serving static folder.
+# @elysiajs/static
+Plugin for [elysia](https://github.com/saltyaom/elysia) for serving static folder.
 
 ## Installation
 ```bash
-bun add @kingworldjs/static
+bun add @elysiajs/static
 ```
 
 ## Example
 ```typescript
-import { KingWorld } from 'kingworld'
-import { staticPlugin } from '@kingworldjs/static'
+import { Elysia } from 'elysia'
+import { staticPlugin } from '@elysiajs/static'
 
-const app = new KingWorld()
+const app = new Elysia()
     .use(staticPlugin())
     .listen(8080)
 ```
