@@ -1,3 +1,7 @@
+# 0.0.0-experimental.3 - 4 Dev 2022
+Feature:
+- Rebrand to Elysia
+
 # 0.0.0-experimental.2 - 22 Nov 2022
 Change:
 - Support for KingWorld 0.0.0-experimental.51

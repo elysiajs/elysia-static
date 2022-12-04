@@ -1,8 +1,8 @@
-import KingWorld from 'kingworld'
+import { Elysia } from 'elysia'
 
-import staticPlugin from '../src/index'
+import { staticPlugin } from '../src/index'
 
-const app = new KingWorld()
+new Elysia()
     .use(
         staticPlugin({
             ignorePatterns: ['public/takodachi.png']

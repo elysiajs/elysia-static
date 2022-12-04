@@ -1,6 +1,5 @@
-import KingWorld from 'kingworld'
-
-import staticPlugin from '../src'
+import { Elysia } from 'elysia'
+import { staticPlugin } from '../src'
 
 import { describe, expect, it } from 'bun:test'
 
@@ -10,7 +9,7 @@ const takodachi = await Bun.file('public/takodachi.png').text()
 
 describe('Static Plugin', () => {
     it('should get root path', async () => {
-        const app = new KingWorld().use(staticPlugin())
+        const app = new Elysia().use(staticPlugin())
 
         const res = await app.handle(req('/public/takodachi.png'))
         const blob = await res.blob()
@@ -18,7 +17,7 @@ describe('Static Plugin', () => {
     })
 
     it('should get nested path', async () => {
-        const app = new KingWorld().use(staticPlugin())
+        const app = new Elysia().use(staticPlugin())
 
         const res = await app.handle(req('/public/nested/takodachi.png'))
         const blob = await res.blob()
@@ -26,7 +25,7 @@ describe('Static Plugin', () => {
     })
 
     it('should get different path', async () => {
-        const app = new KingWorld().use(
+        const app = new Elysia().use(
             staticPlugin({
                 path: 'public-aliased'
             })
@@ -38,7 +37,7 @@ describe('Static Plugin', () => {
     })
 
     it('should handle prefix', async () => {
-        const app = new KingWorld().use(
+        const app = new Elysia().use(
             staticPlugin({
                 prefix: '/static'
             })
@@ -50,7 +49,7 @@ describe('Static Plugin', () => {
     })
 
     it('should handle empty prefix', async () => {
-        const app = new KingWorld().use(
+        const app = new Elysia().use(
             staticPlugin({
                 prefix: ''
             })
@@ -62,7 +61,7 @@ describe('Static Plugin', () => {
     })
 
     it('should supports multiple public', async () => {
-        const app = new KingWorld()
+        const app = new Elysia()
             .use(
                 staticPlugin({
                     prefix: '/public-aliased',
@@ -81,7 +80,7 @@ describe('Static Plugin', () => {
     })
 
     it('should supports mixed folder', async () => {
-        const app = new KingWorld()
+        const app = new Elysia()
             .use(
                 staticPlugin({
                     path: 'public-aliased'
@@ -99,7 +98,7 @@ describe('Static Plugin', () => {
     })
 
     it('ignore string pattern', async () => {
-        const app = new KingWorld().use(
+        const app = new Elysia().use(
             staticPlugin({
                 ignorePatterns: ['public/takodachi.png']
             })
@@ -111,7 +110,7 @@ describe('Static Plugin', () => {
     })
 
     it('ignore regex pattern', async () => {
-        const app = new KingWorld()
+        const app = new Elysia()
             .use(
                 staticPlugin({
                     ignorePatterns: [/takodachi.png$/]

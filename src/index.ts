@@ -1,4 +1,4 @@
-import type KingWorld from 'kingworld'
+import type { Elysia } from 'elysia'
 
 import { readdirSync, existsSync } from 'fs'
 import { resolve, join } from 'path'
@@ -69,7 +69,7 @@ export const staticPlugin =
             ignorePatterns: []
         }
     ) =>
-    (app: KingWorld) => {
+    (app: Elysia) => {
         const files = getFiles(resolve(path))
 
         const shouldIgnore = (file: string) =>
