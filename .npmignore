@@ -15,3 +15,8 @@ example
 tests
 public
 public-aliased
+test
+CHANGELOG.md
+.eslintrc.js
+tsconfig.cjs.json
+tsconfig.esm.json
