@@ -20,3 +20,4 @@ CHANGELOG.md
 .eslintrc.js
 tsconfig.cjs.json
 tsconfig.esm.json
+src
