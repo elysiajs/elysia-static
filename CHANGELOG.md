@@ -1,3 +1,8 @@
+# 0.1.1
+Improvement:
+- A little faster response to inline image
+- Match 404 convention
+
 # 0.1.0-rc.3 - 13 Dec 2022
 Improvement:
 - Add support for Elysia 0.1.0-rc.5

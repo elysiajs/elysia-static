@@ -86,27 +86,27 @@ export const staticPlugin =
             files.forEach((file) => {
                 if (shouldIgnore(file)) return
 
-                app.get(
-                    `/${join(prefix, file.replace(`${path}/`, ''))}`,
-                    () => new Response(Bun.file(file))
+                const response = new Response(Bun.file(file))
+
+                app.get(`/${join(prefix, file.replace(`${path}/`, ''))}`, () =>
+                    response.clone()
                 )
             })
-        else {
+        else
             app.get(`${prefix}/*`, ({ params }) => {
                 const file = `${path}/${(params as any)['*']}`
 
                 if (shouldIgnore(file))
-                    return new Response('Not Found', {
+                    return new Response('NOT_FOUND', {
                         status: 404
                     })
 
-                return existsSync(file)
-                    ? new Response(Bun.file(file))
-                    : new Response('Not Found', {
-                          status: 404
-                      })
+                if (existsSync(file)) return new Response(Bun.file(file))
+
+                return new Response('NOT_FOUND', {
+                    status: 404
+                })
             })
-        }
 
         return app
     }

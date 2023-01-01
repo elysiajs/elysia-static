@@ -3,7 +3,7 @@ import { staticPlugin } from '../src'
 
 import { describe, expect, it } from 'bun:test'
 
-const req = (path: string) => new Request(path)
+const req = (path: string) => new Request(`http://localhost${path}`)
 
 const takodachi = await Bun.file('public/takodachi.png').text()
 
@@ -11,9 +11,11 @@ describe('Static Plugin', () => {
     it('should get root path', async () => {
         const app = new Elysia().use(staticPlugin())
 
-        const res = await app.handle(req('/public/takodachi.png'))
-        const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        const res = await app
+            .handle(req('/public/takodachi.png'))
+            .then((r) => r.blob())
+            .then((r) => r.text())
+        expect(res).toBe(takodachi)
     })
 
     it('should get nested path', async () => {
@@ -106,7 +108,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/public/takodachi.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe('Not Found')
+        expect(await blob.text()).toBe('NOT_FOUND')
     })
 
     it('ignore regex pattern', async () => {
@@ -128,7 +130,7 @@ describe('Static Plugin', () => {
         const blob1 = await file1.blob()
         const blob2 = await file2.blob()
 
-        expect(await blob1.text()).toBe('Not Found')
+        expect(await blob1.text()).toBe('NOT_FOUND')
         expect(await blob2.text()).toBe(takodachi)
     })
 })
