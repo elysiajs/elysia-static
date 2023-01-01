@@ -25,7 +25,8 @@ export const staticPlugin =
             prefix = '/public',
             staticLimit = 1024,
             alwaysStatic = false,
-            ignorePatterns = []
+            ignorePatterns = [],
+            noExtension = false
         }: {
             /**
              * @default "public"
@@ -61,12 +62,19 @@ export const staticPlugin =
              * file will not be exposed.
              */
             ignorePatterns?: Array<string | RegExp>
+            /**
+             * Indicate if file extension is required
+             *
+             * Only works if `alwaysStatic` is set to true
+             */
+            noExtension?: boolean
         } = {
             path: 'public',
             prefix: '/public',
             staticLimit: 1024,
             alwaysStatic: process.env.NODE_ENV === 'production',
-            ignorePatterns: []
+            ignorePatterns: [],
+            noExtension: false
         }
     ) =>
     (app: Elysia) => {
@@ -87,10 +95,18 @@ export const staticPlugin =
                 if (shouldIgnore(file)) return
 
                 const response = new Response(Bun.file(file))
+                let fileName = file
+                    .replace(process.cwd(), '')
+                    .replace(`${path}/`, '')
 
-                app.get(`/${join(prefix, file.replace(`${path}/`, ''))}`, () =>
-                    response.clone()
-                )
+                if (noExtension) {
+                    const temp = fileName.split('.')
+                    temp.splice(-1)
+
+                    fileName = temp.join('.')
+                }
+
+                app.get(join(prefix, fileName), () => response.clone())
             })
         else
             app.get(`${prefix}/*`, ({ params }) => {

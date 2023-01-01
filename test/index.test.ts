@@ -15,6 +15,7 @@ describe('Static Plugin', () => {
             .handle(req('/public/takodachi.png'))
             .then((r) => r.blob())
             .then((r) => r.text())
+
         expect(res).toBe(takodachi)
     })
 
@@ -132,5 +133,36 @@ describe('Static Plugin', () => {
 
         expect(await blob1.text()).toBe('NOT_FOUND')
         expect(await blob2.text()).toBe(takodachi)
+    })
+
+    it('always static', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true
+            })
+        )
+
+        const res = await app
+            .handle(req('/public/takodachi.png'))
+            .then((r) => r.blob())
+            .then((r) => r.text())
+
+        expect(res).toBe(takodachi)
+    })
+
+    it('exclude extension', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                noExtension: true
+            })
+        )
+
+        const res = await app
+            .handle(req('/public/takodachi'))
+            .then((r) => r.blob())
+            .then((r) => r.text())
+
+        expect(res).toBe(takodachi)
     })
 })

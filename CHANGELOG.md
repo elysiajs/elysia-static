@@ -1,4 +1,8 @@
-# 0.1.1
+# 0.1.2 - 1 Jan 2023
+Improvement:
+- Add `noExtension`
+
+# 0.1.1 - 1 Jan 2023
 Improvement:
 - A little faster response to inline image
 - Match 404 convention
