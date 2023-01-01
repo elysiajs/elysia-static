@@ -1,3 +1,7 @@
+# 0.1.3 - 1 Jan 2023
+Fix:
+- Fix crash if total files exceed 76554
+
 # 0.1.2 - 1 Jan 2023
 Improvement:
 - Add `noExtension`

@@ -1,21 +1,20 @@
 import type { Elysia } from 'elysia'
 
-import { readdirSync, existsSync } from 'fs'
+import { readdirSync, statSync, existsSync } from 'fs'
 import { resolve, join } from 'path'
 
-function* walkSync(dir: string): Generator<string> {
-    const files = readdirSync(dir, { withFileTypes: true })
-    for (const file of files) {
-        if (file.isDirectory()) yield* walkSync(join(dir, file.name))
-        else yield join(dir, file.name)
-    }
-}
-
 const getFiles = (dir: string) => {
-    const files: string[] = []
-    for (const filePath of walkSync(dir)) files.push(filePath)
+    let results: string[] = []
 
-    return files
+    readdirSync(dir).forEach((file) => {
+        file = dir + '/' + file
+        const stat = statSync(file)
+
+        if (stat && stat.isDirectory()) results = results.concat(getFiles(file))
+        else results.push(resolve(dir, file))
+    })
+
+    return results
 }
 
 export const staticPlugin =
@@ -96,7 +95,7 @@ export const staticPlugin =
 
                 const response = new Response(Bun.file(file))
                 let fileName = file
-                    .replace(process.cwd(), '')
+                    .replace(resolve(), '')
                     .replace(`${path}/`, '')
 
                 if (noExtension) {
