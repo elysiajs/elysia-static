@@ -11,6 +11,8 @@ describe('Static Plugin', () => {
     it('should get root path', async () => {
         const app = new Elysia().use(staticPlugin())
 
+        await app.modules
+
         const res = await app
             .handle(req('/public/takodachi.png'))
             .then((r) => r.blob())
@@ -21,6 +23,8 @@ describe('Static Plugin', () => {
 
     it('should get nested path', async () => {
         const app = new Elysia().use(staticPlugin())
+
+        await app.modules
 
         const res = await app.handle(req('/public/nested/takodachi.png'))
         const blob = await res.blob()
@@ -34,6 +38,8 @@ describe('Static Plugin', () => {
             })
         )
 
+        await app.modules
+
         const res = await app.handle(req('/public/tako.png'))
         const blob = await res.blob()
         expect(await blob.text()).toBe(takodachi)
@@ -46,6 +52,8 @@ describe('Static Plugin', () => {
             })
         )
 
+        await app.modules
+
         const res = await app.handle(req('/static/takodachi.png'))
         const blob = await res.blob()
         expect(await blob.text()).toBe(takodachi)
@@ -57,6 +65,8 @@ describe('Static Plugin', () => {
                 prefix: ''
             })
         )
+
+        await app.modules
 
         const res = await app.handle(req('/takodachi.png'))
         const blob = await res.blob()
@@ -77,6 +87,8 @@ describe('Static Plugin', () => {
                 })
             )
 
+        await app.modules
+
         const res = await app.handle(req('/public/takodachi.png'))
         const blob = await res.blob()
         expect(await blob.text()).toBe(takodachi)
@@ -90,6 +102,8 @@ describe('Static Plugin', () => {
                 })
             )
             .use(staticPlugin())
+
+        await app.modules
 
         const file1 = await app.handle(req('/public/takodachi.png'))
         const file2 = await app.handle(req('/public/takodachi.png'))
@@ -107,6 +121,8 @@ describe('Static Plugin', () => {
             })
         )
 
+        await app.modules
+
         const res = await app.handle(req('/public/takodachi.png'))
         const blob = await res.blob()
         expect(await blob.text()).toBe('NOT_FOUND')
@@ -115,12 +131,12 @@ describe('Static Plugin', () => {
     it('ignore regex pattern', async () => {
         const app = new Elysia()
             .use(
-                staticPlugin({
+                await staticPlugin({
                     ignorePatterns: [/takodachi.png$/]
                 })
             )
             .use(
-                staticPlugin({
+                await staticPlugin({
                     path: 'public-aliased',
                     ignorePatterns: [/takodachi.png$/]
                 })
@@ -142,6 +158,8 @@ describe('Static Plugin', () => {
             })
         )
 
+        await app.modules
+
         const res = await app
             .handle(req('/public/takodachi.png'))
             .then((r) => r.blob())
@@ -157,6 +175,8 @@ describe('Static Plugin', () => {
                 noExtension: true
             })
         )
+
+        await app.modules
 
         const res = await app
             .handle(req('/public/takodachi'))

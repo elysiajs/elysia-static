@@ -1,3 +1,11 @@
+# 0.2.0-beta.0 - 19 Jan 2023
+Improvement:
+- Using `fs/promise` instead of sync
+- Support non blocking plugin registraiton
+
+Change:
+- Minimum requirement is now `elysia >= 0.2.0-beta.0`
+
 # 0.1.3 - 1 Jan 2023
 Fix:
 - Fix crash if total files exceed 76554
