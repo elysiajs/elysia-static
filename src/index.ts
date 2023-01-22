@@ -20,10 +20,10 @@ const getFiles = async (dir: string): Promise<string[]> => {
     return all.flat()
 }
 
-export const staticPlugin = async (
+export const staticPlugin = async <Prefix extends string = '/prefix'>(
     {
-        path = 'public',
-        prefix = '/public',
+        assets = 'public',
+        prefix = '/public' as Prefix,
         staticLimit = 1024,
         alwaysStatic = false,
         ignorePatterns = [],
@@ -32,15 +32,15 @@ export const staticPlugin = async (
         /**
          * @default "public"
          *
-         * Path to expose as public path
+         * Asset path to expose as public path
          */
-        path?: string
+        assets?: string
         /**
          * @default '/public'
          *
          * Path prefix to create virtual mount path for the static directory
          */
-        prefix?: string
+        prefix?: Prefix
         /**
          * @default 1024
          *
@@ -70,15 +70,17 @@ export const staticPlugin = async (
          */
         noExtension?: boolean
     } = {
-        path: 'public',
-        prefix: '/public',
+        assets: 'public',
+        prefix: '/public' as Prefix,
         staticLimit: 1024,
         alwaysStatic: process.env.NODE_ENV === 'production',
         ignorePatterns: [],
         noExtension: false
     }
 ) => {
-    const files = await getFiles(resolve(path))
+    const files = await getFiles(resolve(assets))
+
+    if (prefix === '/') prefix = '' as Prefix
 
     const shouldIgnore = (file: string) => {
         if (!ignorePatterns.length) return false
@@ -102,7 +104,7 @@ export const staticPlugin = async (
                 const response = new Response(Bun.file(file))
                 let fileName = file
                     .replace(resolve(), '')
-                    .replace(`${path}/`, '')
+                    .replace(`${assets}/`, '')
 
                 if (noExtension) {
                     const temp = fileName.split('.')
@@ -115,7 +117,7 @@ export const staticPlugin = async (
             }
         else
             app.get(`${prefix}/*`, (c) => {
-                const file = `${path}/${(c.params as any)['*']}`
+                const file = `${assets}/${(c.params as any)['*']}`
 
                 if (shouldIgnore(file))
                     return new Response('NOT_FOUND', {

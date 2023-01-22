@@ -1,3 +1,10 @@
+# 0.2.0-beta.1 - 22 Jan 2023
+Breaking Change:
+- `path` is now `assets`
+
+Improvement:
+- Handle index (/)
+
 # 0.2.0-beta.0 - 19 Jan 2023
 Improvement:
 - Using `fs/promise` instead of sync
