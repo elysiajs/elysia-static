@@ -34,7 +34,7 @@ describe('Static Plugin', () => {
     it('should get different path', async () => {
         const app = new Elysia().use(
             staticPlugin({
-                path: 'public-aliased'
+                assets: 'public-aliased'
             })
         )
 
@@ -78,7 +78,7 @@ describe('Static Plugin', () => {
             .use(
                 staticPlugin({
                     prefix: '/public-aliased',
-                    path: 'public-aliased'
+                    assets: 'public-aliased'
                 })
             )
             .use(
@@ -98,7 +98,7 @@ describe('Static Plugin', () => {
         const app = new Elysia()
             .use(
                 staticPlugin({
-                    path: 'public-aliased'
+                    assets: 'public-aliased'
                 })
             )
             .use(staticPlugin())
@@ -137,7 +137,7 @@ describe('Static Plugin', () => {
             )
             .use(
                 await staticPlugin({
-                    path: 'public-aliased',
+                    assets: 'public-aliased',
                     ignorePatterns: [/takodachi.png$/]
                 })
             )
