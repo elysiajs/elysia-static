@@ -19,10 +19,10 @@ const app = new Elysia()
 ## Config
 Below is an available config for a static plugin.
 
-### path
+### assets
 @default "public"
 
-Path to expose as a public path
+Asset path to expose as a public path
 
 ### prefix
 @default '/public'

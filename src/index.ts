@@ -1,102 +1,110 @@
 import type { Elysia } from 'elysia'
 
-import { readdirSync, statSync, existsSync } from 'fs'
+import { readdir, stat } from 'fs/promises'
 import { resolve, join } from 'path'
 
-const getFiles = (dir: string) => {
-    let results: string[] = []
+const getFiles = async (dir: string): Promise<string[]> => {
+    const files = await readdir(dir)
 
-    readdirSync(dir).forEach((file) => {
-        file = dir + '/' + file
-        const stat = statSync(file)
+    const all = await Promise.all(
+        files.map(async (name) => {
+            const file = dir + '/' + name
+            const stats = await stat(file)
 
-        if (stat && stat.isDirectory()) results = results.concat(getFiles(file))
-        else results.push(resolve(dir, file))
-    })
+            return stats && stats.isDirectory()
+                ? await getFiles(file)
+                : [resolve(dir, file)]
+        })
+    )
 
-    return results
+    return all.flat()
 }
 
-export const staticPlugin =
-    (
-        {
-            path = 'public',
-            prefix = '/public',
-            staticLimit = 1024,
-            alwaysStatic = false,
-            ignorePatterns = [],
-            noExtension = false
-        }: {
-            /**
-             * @default "public"
-             *
-             * Path to expose as public path
-             */
-            path?: string
-            /**
-             * @default '/public'
-             *
-             * Path prefix to create virtual mount path for the static directory
-             */
-            prefix?: string
-            /**
-             * @default 1024
-             *
-             * If total files exceed this number,
-             * file will be handled via wildcard instead of static route
-             * to reduce memory usage
-             */
-            staticLimit?: number
-            /**
-             * @default false
-             *
-             * If set to true, file will always use static path instead
-             */
-            alwaysStatic?: boolean
-            /**
-             * @default [] `Array<string | RegExp>`
-             *
-             * Array of file to ignore publication.
-             * If one of the patters is matched,
-             * file will not be exposed.
-             */
-            ignorePatterns?: Array<string | RegExp>
-            /**
-             * Indicate if file extension is required
-             *
-             * Only works if `alwaysStatic` is set to true
-             */
-            noExtension?: boolean
-        } = {
-            path: 'public',
-            prefix: '/public',
-            staticLimit: 1024,
-            alwaysStatic: process.env.NODE_ENV === 'production',
-            ignorePatterns: [],
-            noExtension: false
-        }
-    ) =>
-    (app: Elysia) => {
-        const files = getFiles(resolve(path))
+export const staticPlugin = async <Prefix extends string = '/prefix'>(
+    {
+        assets = 'public',
+        prefix = '/public' as Prefix,
+        staticLimit = 1024,
+        alwaysStatic = false,
+        ignorePatterns = [],
+        noExtension = false
+    }: {
+        /**
+         * @default "public"
+         *
+         * Asset path to expose as public path
+         */
+        assets?: string
+        /**
+         * @default '/public'
+         *
+         * Path prefix to create virtual mount path for the static directory
+         */
+        prefix?: Prefix
+        /**
+         * @default 1024
+         *
+         * If total files exceed this number,
+         * file will be handled via wildcard instead of static route
+         * to reduce memory usage
+         */
+        staticLimit?: number
+        /**
+         * @default false
+         *
+         * If set to true, file will always use static path instead
+         */
+        alwaysStatic?: boolean
+        /**
+         * @default [] `Array<string | RegExp>`
+         *
+         * Array of file to ignore publication.
+         * If one of the patters is matched,
+         * file will not be exposed.
+         */
+        ignorePatterns?: Array<string | RegExp>
+        /**
+         * Indicate if file extension is required
+         *
+         * Only works if `alwaysStatic` is set to true
+         */
+        noExtension?: boolean
+    } = {
+        assets: 'public',
+        prefix: '/public' as Prefix,
+        staticLimit: 1024,
+        alwaysStatic: process.env.NODE_ENV === 'production',
+        ignorePatterns: [],
+        noExtension: false
+    }
+) => {
+    const files = await getFiles(resolve(assets))
 
-        const shouldIgnore = (file: string) =>
-            ignorePatterns.find((pattern) => {
-                if (typeof pattern === 'string') return pattern.includes(file)
-                else return pattern.test(file)
-            })
+    if (prefix === '/') prefix = '' as Prefix
 
+    const shouldIgnore = (file: string) => {
+        if (!ignorePatterns.length) return false
+
+        return ignorePatterns.find((pattern) => {
+            if (typeof pattern === 'string') return pattern.includes(file)
+            else return pattern.test(file)
+        })
+    }
+
+    return (app: Elysia) => {
         if (
             alwaysStatic ||
             (process.env.NODE_ENV === 'production' &&
                 files.length <= staticLimit)
         )
-            files.forEach((file) => {
-                if (shouldIgnore(file)) return
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i]
+                if (shouldIgnore(file)) continue
 
                 const response = new Response(Bun.file(file))
                 let fileName = file
                     .replace(resolve(), '')
-                    .replace(`${path}/`, '')
+                    .replace(`${assets}/`, '')
 
                 if (noExtension) {
                     const temp = fileName.split('.')
@@ -106,24 +114,28 @@ export const staticPlugin =
                 }
 
                 app.get(join(prefix, fileName), () => response.clone())
-            })
+            }
         else
-            app.get(`${prefix}/*`, ({ params }) => {
-                const file = `${path}/${(params as any)['*']}`
+            app.get(`${prefix}/*`, (c) => {
+                const file = `${assets}/${(c.params as any)['*']}`
 
                 if (shouldIgnore(file))
                     return new Response('NOT_FOUND', {
                         status: 404
                     })
 
-                if (existsSync(file)) return new Response(Bun.file(file))
-
-                return new Response('NOT_FOUND', {
-                    status: 404
-                })
+                return stat(file)
+                    .then((status) => new Response(Bun.file(file)))
+                    .catch(
+                        (error) =>
+                            new Response('NOT_FOUND', {
+                                status: 404
+                            })
+                    )
             })
 
         return app
     }
+}
 
 export default staticPlugin
