@@ -12,7 +12,7 @@ import { Elysia } from 'elysia'
 import { staticPlugin } from '@elysiajs/static'
 
 const app = new Elysia()
-    .use(staticPlugin())
+    .use(await staticPlugin())
     .listen(8080)
 ```
 
