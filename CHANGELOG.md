@@ -1,3 +1,8 @@
+# 0.3.0-rc.0 - 7 Mar 2023
+Improvement:
+- Add support for Elysia 0.3.0-rc.0
+- Add support for Raikiri router
+
 # 0.2.0-beta.1 - 22 Jan 2023
 Breaking Change:
 - `path` is now `assets`
