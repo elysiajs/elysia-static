@@ -15,3 +15,8 @@ const app = new Elysia()
         })
     )
     .listen(8080)
+
+await app.modules
+
+// @ts-ignore
+console.log(app.router.history)
