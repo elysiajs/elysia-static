@@ -2,10 +2,16 @@ import { Elysia } from 'elysia'
 
 import { staticPlugin } from '../src/index'
 
-new Elysia()
+const app = new Elysia()
     .use(
         staticPlugin({
-            ignorePatterns: ['public/takodachi.png']
+            prefix: '/public-aliased',
+            assets: 'public-aliased'
+        })
+    )
+    .use(
+        staticPlugin({
+            prefix: '/public'
         })
     )
     .listen(8080)

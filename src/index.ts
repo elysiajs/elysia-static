@@ -91,17 +91,21 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         })
     }
 
+    // console.log({
+    //     assets,
+    //     files
+    // })
+
     return (app: Elysia) => {
         if (
             alwaysStatic ||
-            (process.env.NODE_ENV === 'production' &&
-                files.length <= staticLimit)
+            (process.env.ENV === 'production' && files.length <= staticLimit)
         )
             for (let i = 0; i < files.length; i++) {
                 const file = files[i]
                 if (shouldIgnore(file)) continue
 
-                const response = new Response(Bun.file(file))
+                const response = () => new Response(Bun.file(file))
                 let fileName = file
                     .replace(resolve(), '')
                     .replace(`${assets}/`, '')
@@ -113,26 +117,34 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                     fileName = temp.join('.')
                 }
 
-                app.get(join(prefix, fileName), () => response.clone())
+                app.get(join(prefix, fileName), response)
             }
-        else
-            app.get(`${prefix}/*`, (c) => {
-                const file = `${assets}/${(c.params as any)['*']}`
+        else {
+            if (
+                // @ts-ignore
+                !app.routes.find(
+                    ({ method, path }) =>
+                        path === `${prefix}/*` && method === 'GET'
+                )
+            )
+                app.get(`${prefix}/*`, (c) => {
+                    const file = `${assets}/${(c.params as any)['*']}`
 
-                if (shouldIgnore(file))
-                    return new Response('NOT_FOUND', {
-                        status: 404
-                    })
+                    if (shouldIgnore(file))
+                        return new Response('NOT_FOUND', {
+                            status: 404
+                        })
 
-                return stat(file)
-                    .then((status) => new Response(Bun.file(file)))
-                    .catch(
-                        (error) =>
-                            new Response('NOT_FOUND', {
-                                status: 404
-                            })
-                    )
-            })
+                    return stat(file)
+                        .then((status) => new Response(Bun.file(file)))
+                        .catch(
+                            (error) =>
+                                new Response('NOT_FOUND', {
+                                    status: 404
+                                })
+                        )
+                })
+        }
 
         return app
     }
