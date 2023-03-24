@@ -1,7 +1,7 @@
 import type { Elysia } from 'elysia'
 
 import { readdir, stat } from 'fs/promises'
-import { resolve, join } from 'path'
+import { resolve, resolve as resolveFn, join } from 'path'
 
 const getFiles = async (dir: string): Promise<string[]> => {
     const files = await readdir(dir)
@@ -26,8 +26,9 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         prefix = '/public' as Prefix,
         staticLimit = 1024,
         alwaysStatic = false,
-        ignorePatterns = [],
-        noExtension = false
+        ignorePatterns = ['.DS_Store', '.git', '.env'],
+        noExtension = false,
+        resolve = resolveFn
     }: {
         /**
          * @default "public"
@@ -69,13 +70,18 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          * Only works if `alwaysStatic` is set to true
          */
         noExtension?: boolean
+        /**
+         * Nodejs resolve function
+         */
+        resolve?: (...pathSegments: string[]) => string
     } = {
         assets: 'public',
         prefix: '/public' as Prefix,
         staticLimit: 1024,
         alwaysStatic: process.env.NODE_ENV === 'production',
         ignorePatterns: [],
-        noExtension: false
+        noExtension: false,
+        resolve: resolveFn
     }
 ) => {
     const files = await getFiles(resolve(assets))
@@ -90,11 +96,6 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
             else return pattern.test(file)
         })
     }
-
-    // console.log({
-    //     assets,
-    //     files
-    // })
 
     return (app: Elysia) => {
         if (
