@@ -1,7 +1,7 @@
 {
   "name": "@elysiajs/static",
   "description": "Plugin for Elysia for serving static folder",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "author": {
     "name": "saltyAom",
     "url": "https://github.com/SaltyAom",

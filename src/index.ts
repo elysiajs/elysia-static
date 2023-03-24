@@ -84,7 +84,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         resolve: resolveFn
     }
 ) => {
-    const files = await getFiles(resolve(assets))
+    const files = await getFiles(resolveFn(assets))
 
     if (prefix === '/') prefix = '' as Prefix
 

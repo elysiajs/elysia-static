@@ -1,4 +1,8 @@
 # 0.3.1 - 24 Mar 2023
+fix:
+- resolve fn on wrong location
+
+# 0.3.1 - 24 Mar 2023
 Improvement:
 - Add custom resolve function
 - Ignore `.env`, `.DS_Store` by default
