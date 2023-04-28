@@ -43,8 +43,5 @@
   },
   "peerDependencies": {
     "elysia": ">= 0.3.0"
-  },
-  "dependencies": {
-    "raikiri": "0.1.0-beta.1"
   }
 }
