@@ -1,7 +1,6 @@
 {
   "name": "@elysiajs/static",
-  "description": "Plugin for Elysia for serving static folder",
-  "version": "0.3.2",
+  "version": "0.5.0-rc.0",
   "author": {
     "name": "saltyAom",
     "url": "https://github.com/SaltyAom",
@@ -12,14 +11,26 @@
     "url": "https://github.com/elysiajs/elysia-static"
   },
   "main": "./dist/index.js",
+  "devDependencies": {
+    "@types/node": "^20.1.4",
+    "bun-types": "^0.5.8",
+    "elysia": "0.5.0-beta.3",
+    "eslint": "^8.40.0",
+    "mitata": "^0.1.6",
+    "rimraf": "4.3",
+    "typescript": "^5.0.4"
+  },
+  "peerDependencies": {
+    "elysia": ">= 0.5.0-beta.3"
+  },
   "exports": {
     "require": "./dist/index.js",
     "import": "./dist/index.js",
     "node": "./dist/index.js",
     "default": "./dist/index.js"
   },
-  "types": "./src/index.ts",
   "bugs": "https://github.com/elysiajs/elysia-static/issues",
+  "description": "Plugin for Elysia for serving static folder",
   "homepage": "https://github.com/elysiajs/elysia-static",
   "keywords": [
     "elysia",
@@ -30,21 +41,8 @@
   "scripts": {
     "dev": "bun run --hot example/index.ts",
     "test": "bun wiptest",
-    "build": "rimraf dist && tsc --project tsconfig.esm.json",
+    "build": "rimraf dist && tsc --project tsconfig.esm.json && tsc --project tsconfig.cjs.json",
     "release": "npm run build && npm run test && npm publish --access public"
   },
-  "devDependencies": {
-    "@types/node": "^18.11.7",
-    "bun-types": "^0.5.7",
-    "elysia": "^0.3.0",
-    "eslint": "^8.26.0",
-    "mitata": "^0.1.6",
-    "typescript": "^4.9.4"
-  },
-  "peerDependencies": {
-    "elysia": ">= 0.3.0"
-  },
-  "dependencies": {
-    "raikiri": "0.1.0-beta.1"
-  }
+  "types": "./src/index.ts"
 }
