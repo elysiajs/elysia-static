@@ -1,3 +1,7 @@
+# 0.5.0 - 15 May 2023
+- Add support for Elysia 0.5
+- Add CommonJS support
+
 # 0.3.1 - 24 Mar 2023
 fix:
 - resolve fn on wrong location
