@@ -1,3 +1,26 @@
+# 0.7.1 - 23 Sep 2023
+Improvement:
+- [#10](https://github.com/elysiajs/elysia-static/issues/10) onError is not triggered when page is not found and file resolution is dynamic
+- [#7](https://github.com/elysiajs/elysia-static/issues/8) add `headers` config
+- using new plugin model instead of functional callback
+
+Change:
+- Minimum support for Elysia is now set to 0.7.9
+
+Bug fix:
+- [#8](https://github.com/elysiajs/elysia-static/issues/8) set `noUncheckedIndexedAccess` to `true`
+
+# 0.7.0 - 20 Sep 2023
+- Add support for Elysia 0.7
+
+# 0.7.0-beta.0 - 18 Sep 2023
+- Add support for Elysia 0.7
+
+# 0.6.0 - 6 Aug 2023
+- Add support for Elysia 0.6
+
+# 0.6.0-rc.0 - 6 Aug 2023
+- Add support for Elysia 0.6
 # 0.5.0 - 15 May 2023
 - Add support for Elysia 0.5
 - Add CommonJS support

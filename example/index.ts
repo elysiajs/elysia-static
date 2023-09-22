@@ -2,6 +2,10 @@ import { Elysia } from 'elysia'
 
 import { staticPlugin } from '../src/index'
 
+const a = async () => {
+    return new Elysia()
+}
+
 const app = new Elysia()
     .use(
         staticPlugin({
@@ -14,9 +18,8 @@ const app = new Elysia()
             prefix: '/public'
         })
     )
-    .listen(8080)
+    .listen(3000)
 
 await app.modules
 
-// @ts-ignore
-console.log(app.router.history)
+console.log(app.routes)

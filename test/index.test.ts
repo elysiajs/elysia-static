@@ -95,7 +95,7 @@ describe('Static Plugin', () => {
     })
 
     it('ignore string pattern', async () => {
-        const app = new Elysia().use(
+        const app = new Elysia({ forceErrorEncapsulation: true }).use(
             staticPlugin({
                 ignorePatterns: ['public/takodachi.png']
             })
@@ -104,17 +104,15 @@ describe('Static Plugin', () => {
         await app.modules
 
         const res = await app.handle(req('/public/takodachi.png'))
-        const blob = await res.blob()
-        expect(await blob.text()).toBe('NOT_FOUND')
+        expect(res.status).toBe(404)
     })
 
     it('ignore regex pattern', async () => {
-        const app = new Elysia()
-            .use(
-                staticPlugin({
-                    ignorePatterns: [/takodachi.png$/]
-                })
-            )
+        const app = new Elysia().use(
+            staticPlugin({
+                ignorePatterns: [/takodachi.png$/]
+            })
+        )
 
         const file = await app.handle(req('/public/takodachi.png'))
 
@@ -154,5 +152,44 @@ describe('Static Plugin', () => {
             .then((r) => r.text())
 
         expect(res).toBe(takodachi)
+    })
+
+    it('return custom headers', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                noExtension: true,
+                headers: {
+                    ['x-powered-by']: 'Takodachi'
+                }
+            })
+        )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi'))
+
+        expect(res.headers.get('x-powered-by')).toBe('Takodachi')
+        expect(res.status).toBe(200)
+    })
+
+    it('call onError when using dynamic mode', async () => {
+        let called = false
+
+        const app = new Elysia()
+            .onError(({ code }) => {
+                if (code === 'NOT_FOUND') called = true
+            })
+            .use(
+                staticPlugin({
+                    alwaysStatic: false
+                })
+            )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/not-found'))
+
+        expect(called).toBe(true)
     })
 })

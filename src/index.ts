@@ -1,9 +1,9 @@
-import type { Elysia } from 'elysia'
+import { NotFoundError, Elysia } from 'elysia'
 
 import { readdir, stat } from 'fs/promises'
 import { resolve, resolve as resolveFn, join } from 'path'
 
-const getFiles = async (dir: string): Promise<string[]> => {
+const listFiles = async (dir: string): Promise<string[]> => {
     const files = await readdir(dir)
 
     const all = await Promise.all(
@@ -12,7 +12,7 @@ const getFiles = async (dir: string): Promise<string[]> => {
             const stats = await stat(file)
 
             return stats && stats.isDirectory()
-                ? await getFiles(file)
+                ? await listFiles(file)
                 : [resolve(dir, file)]
         })
     )
@@ -28,7 +28,8 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         alwaysStatic = false,
         ignorePatterns = ['.DS_Store', '.git', '.env'],
         noExtension = false,
-        resolve = resolveFn
+        resolve = resolveFn,
+        headers = {}
     }: {
         /**
          * @default "public"
@@ -74,6 +75,10 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          * Nodejs resolve function
          */
         resolve?: (...pathSegments: string[]) => string
+        /**
+         * Set headers
+         */
+        headers?: Record<string, string> | undefined
     } = {
         assets: 'public',
         prefix: '/public' as Prefix,
@@ -81,10 +86,11 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         alwaysStatic: process.env.NODE_ENV === 'production',
         ignorePatterns: [],
         noExtension: false,
-        resolve: resolveFn
+        resolve: resolveFn,
+        headers: {}
     }
 ) => {
-    const files = await getFiles(resolveFn(assets))
+    const files = await listFiles(resolveFn(assets))
 
     if (prefix === '/') prefix = '' as Prefix
 
@@ -97,58 +103,71 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         })
     }
 
-    return (app: Elysia) => {
-        if (
-            alwaysStatic ||
-            (process.env.ENV === 'production' && files.length <= staticLimit)
-        )
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i]
-                if (shouldIgnore(file)) continue
-
-                const response = () => new Response(Bun.file(file))
-                let fileName = file
-                    .replace(resolve(), '')
-                    .replace(`${assets}/`, '')
-
-                if (noExtension) {
-                    const temp = fileName.split('.')
-                    temp.splice(-1)
-
-                    fileName = temp.join('.')
-                }
-
-                app.get(join(prefix, fileName), response)
-            }
-        else {
-            if (
-                // @ts-ignore
-                !app.routes.find(
-                    ({ method, path }) =>
-                        path === `${prefix}/*` && method === 'GET'
-                )
-            )
-                app.get(`${prefix}/*`, (c) => {
-                    const file = `${assets}/${(c.params as any)['*']}`
-
-                    if (shouldIgnore(file))
-                        return new Response('NOT_FOUND', {
-                            status: 404
-                        })
-
-                    return stat(file)
-                        .then((status) => new Response(Bun.file(file)))
-                        .catch(
-                            (error) =>
-                                new Response('NOT_FOUND', {
-                                    status: 404
-                                })
-                        )
-                })
+    const app = new Elysia({
+        name: 'static',
+        seed: {
+            assets,
+            prefix,
+            staticLimit,
+            alwaysStatic,
+            ignorePatterns,
+            noExtension,
+            resolve: resolve.toString()
         }
+    })
 
-        return app
+    if (
+        alwaysStatic ||
+        (process.env.ENV === 'production' && files.length <= staticLimit)
+    )
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]
+            if (!file || shouldIgnore(file)) continue
+
+            const response = Object.keys(headers).length
+                ? () =>
+                      new Response(Bun.file(file), {
+                          headers
+                      })
+                : () => new Response(Bun.file(file))
+
+            let fileName = file.replace(resolve(), '').replace(`${assets}/`, '')
+
+            if (noExtension) {
+                const temp = fileName.split('.')
+                temp.splice(-1)
+
+                fileName = temp.join('.')
+            }
+
+            app.get(join(prefix, fileName), response)
+        }
+    else {
+        if (
+            // @ts-ignore
+            !app.routes.find(
+                ({ method, path }) => path === `${prefix}/*` && method === 'GET'
+            )
+        )
+            app.onError(() => {}).get(`${prefix}/*`, async ({ params }) => {
+                const file = `${assets}/${(params as any)['*']}`
+
+                if (shouldIgnore(file)) throw new NotFoundError()
+
+                return stat(file)
+                    .then(
+                        (status) =>
+                            new Response(Bun.file(file), {
+                                headers
+                            })
+                    )
+                    .catch((error) => {
+                        throw new NotFoundError()
+                    })
+            })
     }
+
+    return app
 }
 
 export default staticPlugin
