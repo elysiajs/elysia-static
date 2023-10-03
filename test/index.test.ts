@@ -2,6 +2,7 @@ import { Elysia } from 'elysia'
 import { staticPlugin } from '../src'
 
 import { describe, expect, it } from 'bun:test'
+import { join } from "path";
 
 const req = (path: string) => new Request(`http://localhost${path}`)
 
@@ -134,6 +135,21 @@ describe('Static Plugin', () => {
             .then((r) => r.text())
 
         expect(res).toBe(takodachi)
+    })
+
+    it('always static with assets on an absolute path', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                assets: join(import.meta.dir, '../public')
+            })
+        )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+        const blob = await res.blob()
+        expect(await blob.text()).toBe(takodachi)
     })
 
     it('exclude extension', async () => {
