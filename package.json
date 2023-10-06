@@ -16,6 +16,7 @@
     "bun-types": "^1.0.2",
     "elysia": "^0.7.9",
     "eslint": "^8.40.0",
+    "prettier": "^3.0.3",
     "rimraf": "4.4.1",
     "typescript": "^5.2.2"
   },
@@ -42,6 +43,8 @@
     "dev": "bun run --hot example/index.ts",
     "test": "bun test && npm run test:node",
     "test:node": "npm install --prefix ./test/node/cjs/ && npm install --prefix ./test/node/esm/ && node ./test/node/cjs/index.js && node ./test/node/esm/index.js",
+    "lint": "prettier --check . && eslint . -c .eslintrc.json",
+    "format": "prettier --write .",
     "build": "rimraf dist && tsc --project tsconfig.esm.json && tsc --project tsconfig.cjs.json",
     "release": "npm run build && npm run test && npm publish --access public"
   },
