@@ -44,7 +44,7 @@
     "dev": "bun run --hot example/index.ts",
     "test": "bun test && npm run test:node",
     "test:node": "npm install --prefix ./test/node/cjs/ && npm install --prefix ./test/node/esm/ && node ./test/node/cjs/index.js && node ./test/node/esm/index.js",
-    "lint": "prettier --check . && eslint . -c .eslintrc.json",
+    "lint": "prettier --check . && eslint .",
     "format": "prettier --write .",
     "build": "rimraf dist && tsc --project tsconfig.esm.json && tsc --project tsconfig.cjs.json",
     "release": "npm run build && npm run test && npm publish --access public"
