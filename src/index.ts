@@ -144,24 +144,23 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         }
     else {
         if (
-            // @ts-ignore
             !app.routes.find(
                 ({ method, path }) => path === `${prefix}/*` && method === 'GET'
             )
         )
             app.onError(() => {}).get(`${prefix}/*`, async ({ params }) => {
-                const file = `${assets}/${(params as any)['*']}`
+                const file = `${assets}/${params['*']}`
 
                 if (shouldIgnore(file)) throw new NotFoundError()
 
                 return stat(file)
                     .then(
-                        (status) =>
+                        () =>
                             new Response(Bun.file(file), {
                                 headers
                             })
                     )
-                    .catch((error) => {
+                    .catch(() => {
                         throw new NotFoundError()
                     })
             })

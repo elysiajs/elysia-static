@@ -188,7 +188,7 @@ describe('Static Plugin', () => {
 
         await app.modules
 
-        const res = await app.handle(req('/public/not-found'))
+        await app.handle(req('/public/not-found'))
 
         expect(called).toBe(true)
     })
