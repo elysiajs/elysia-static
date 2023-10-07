@@ -56,7 +56,9 @@ export async function isCached(
         let lastModified: Date | undefined
         try {
             lastModified = (await stat(filePath)).mtime
-        } catch {}
+        } catch {
+            /* empty */
+        }
 
         if (
             lastModified !== undefined &&

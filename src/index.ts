@@ -154,18 +154,15 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                     })
                 }
 
-                headers = {
-                    ...headers,
-                    etag,
-                    'Cache-Control': 'public, max-age=0'
-                }
-
                 if (await isCached(reqHeaders, etag, filePath)) {
                     return new Response(null, {
                         status: 304,
                         headers
                     })
                 }
+
+                headers['Etag'] = etag
+                headers['Cache-Control'] = 'public, max-age=0'
 
                 return new Response(file, {
                     headers
@@ -200,11 +197,6 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                     }
 
                     const etag = await generateETag(file)
-                    headers = {
-                        ...headers,
-                        etag,
-                        'Cache-Control': 'public, max-age=0'
-                    }
 
                     if (await isCached(reqHeaders, etag, filePath)) {
                         return new Response(null, {
@@ -212,6 +204,9 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                             headers
                         })
                     }
+
+                    headers['Etag'] = etag
+                    headers['Cache-Control'] = 'public, max-age=0'
 
                     return new Response(file, {
                         headers
