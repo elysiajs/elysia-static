@@ -28,6 +28,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         alwaysStatic = false,
         ignorePatterns = ['.DS_Store', '.git', '.env'],
         noExtension = false,
+        enableDecodeURI = false,
         resolve = resolveFn,
         headers = {}
     }: {
@@ -72,6 +73,13 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          */
         noExtension?: boolean
         /**
+         * 
+         * When url needs to be decoded
+         * 
+         * Only works if `alwaysStatic` is set to false
+         */
+        enableDecodeURI?: boolean
+        /**
          * Nodejs resolve function
          */
         resolve?: (...pathSegments: string[]) => string
@@ -86,6 +94,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         alwaysStatic: process.env.NODE_ENV === 'production',
         ignorePatterns: [],
         noExtension: false,
+        enableDecodeURI: false,
         resolve: resolveFn,
         headers: {}
     }
@@ -150,7 +159,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
             )
         )
             app.onError(() => {}).get(`${prefix}/*`, async ({ params }) => {
-                const file = `${assets}/${(params as any)['*']}`
+                const file = enableDecodeURI ? decodeURI(`${assets}/${decodeURI(params['*'])}`) : `${assets}/${(params as any)['*']}`
 
                 if (shouldIgnore(file)) throw new NotFoundError()
 
