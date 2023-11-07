@@ -192,4 +192,24 @@ describe('Static Plugin', () => {
 
         expect(called).toBe(true)
     })
+
+    it('should 404 when navigate to folder', async () => {
+
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const notFoundPaths = [
+            '/public',
+            '/public/',
+            '/public/nested',
+            '/public/nested/'
+        ]
+
+        for (const path of notFoundPaths) {
+            const res = await app.handle(req(path))
+
+            expect(res.status).toBe(404)
+        }
+    })
 })
