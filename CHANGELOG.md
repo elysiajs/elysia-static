@@ -1,3 +1,8 @@
+
+# 0.8.0-rc.0 - 15 Dec 2023
+Change:
+- Add support for Elysia 0.8
+
 # 0.7.1 - 23 Sep 2023
 Improvement:
 - [#10](https://github.com/elysiajs/elysia-static/issues/10) onError is not triggered when page is not found and file resolution is dynamic
