@@ -1,6 +1,6 @@
 {
     "name": "@elysiajs/static",
-    "version": "0.8.0-rc.0",
+    "version": "0.8.0",
     "author": {
         "name": "saltyAom",
         "url": "https://github.com/SaltyAom",
@@ -14,13 +14,13 @@
     "devDependencies": {
         "@types/node": "^20.1.4",
         "bun-types": "^1.0.2",
-        "elysia": "0.8.0-rc.0",
+        "elysia": "0.8.0",
         "eslint": "^8.40.0",
         "rimraf": "4.4.1",
         "typescript": "^5.2.2"
     },
     "peerDependencies": {
-        "elysia": ">= 0.8.0-rc.0"
+        "elysia": ">= 0.8.0"
     },
     "exports": {
         "bun": "./dist/index.js",
