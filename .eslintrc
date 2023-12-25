@@ -14,5 +14,5 @@
         "@typescript-eslint/ban-types": "off",
         "@typescript-eslint/no-explicit-any": 1
     },
-    "ignorePatterns": ["example/*", "test/**/*"]
+    "ignorePatterns": ["example/*", "test/*", "dist/*"]
 }
