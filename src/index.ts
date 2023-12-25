@@ -2,6 +2,7 @@ import { NotFoundError, Elysia } from 'elysia'
 
 import { readdir, stat } from 'fs/promises'
 import { resolve, resolve as resolveFn, join } from 'path'
+import { generateETag, isCached } from './cache'
 
 const listFiles = async (dir: string): Promise<string[]> => {
     const files = await readdir(dir)
@@ -30,7 +31,8 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         noExtension = false,
         enableDecodeURI = false,
         resolve = resolveFn,
-        headers = {}
+        headers = {},
+        noCache = false
     }: {
         /**
          * @default "public"
@@ -87,6 +89,12 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          * Set headers
          */
         headers?: Record<string, string> | undefined
+        /**
+         * @default false
+         *
+         * If set to true, browser caching will be disabled
+         */
+        noCache?: boolean
     } = {
         assets: 'public',
         prefix: '/public' as Prefix,
@@ -96,7 +104,8 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         noExtension: false,
         enableDecodeURI: false,
         resolve: resolveFn,
-        headers: {}
+        headers: {},
+        noCache: false
     }
 ) => {
     const files = await listFiles(resolveFn(assets))
@@ -130,17 +139,12 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         (process.env.ENV === 'production' && files.length <= staticLimit)
     )
         for (let i = 0; i < files.length; i++) {
-            const file = files[i]
-            if (!file || shouldIgnore(file)) continue
+            const filePath = files[i]
+            if (!filePath || shouldIgnore(filePath)) continue
 
-            const response = Object.keys(headers).length
-                ? () =>
-                      new Response(Bun.file(file), {
-                          headers
-                      })
-                : () => new Response(Bun.file(file))
-
-            let fileName = file.replace(resolve(), '').replace(`${assets}/`.replace(resolve(), ''), '')
+            let fileName = filePath
+                .replace(resolve(), '')
+                .replace(`${assets}/`, '')
 
             if (noExtension) {
                 const temp = fileName.split('.')
@@ -149,11 +153,33 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                 fileName = temp.join('.')
             }
 
-            app.get(join(prefix, fileName), response)
+            const file = Bun.file(filePath)
+            const etag = await generateETag(file)
+
+            app.get(join(prefix, fileName), async ({ headers: reqHeaders }) => {
+                if (noCache) {
+                    return new Response(file, {
+                        headers
+                    })
+                }
+
+                if (await isCached(reqHeaders, etag, filePath)) {
+                    return new Response(null, {
+                        status: 304,
+                        headers
+                    })
+                }
+
+                headers['Etag'] = etag
+                headers['Cache-Control'] = 'public, max-age=0'
+
+                return new Response(file, {
+                    headers
+                })
+            })
         }
     else {
         if (
-            // @ts-ignore
             !app.routes.find(
                 ({ method, path }) => path === `${prefix}/*` && method === 'GET'
             )
@@ -176,8 +202,33 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                     )
                     .catch((error) => {
                         throw new NotFoundError()
+                    }
+
+                    const file = Bun.file(filePath)
+
+                    if (noCache) {
+                        return new Response(file, {
+                            headers
+                        })
+                    }
+
+                    const etag = await generateETag(file)
+
+                    if (await isCached(reqHeaders, etag, filePath)) {
+                        return new Response(null, {
+                            status: 304,
+                            headers
+                        })
+                    }
+
+                    headers['Etag'] = etag
+                    headers['Cache-Control'] = 'public, max-age=0'
+
+                    return new Response(file, {
+                        headers
                     })
-            })
+                }
+            )
     }
 
     return app

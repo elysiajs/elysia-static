@@ -204,11 +204,108 @@ describe('Static Plugin', () => {
 
         await app.modules
 
-        const res = await app.handle(req('/public/not-found'))
+        await app.handle(req('/public/not-found'))
 
         expect(called).toBe(true)
     })
 
+    it('return etag header', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                noExtension: true
+            })
+        )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi'))
+
+        expect(res.headers.get('Etag')).toBe('ZGe9eXgawZBlMox8sZg82Q==')
+        expect(res.status).toBe(200)
+    })
+
+    it('return no etag header when noCache', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                noExtension: true,
+                noCache: true
+            })
+        )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi'))
+
+        expect(res.headers.get('Etag')).toBe(null)
+        expect(res.status).toBe(200)
+    })
+
+    it('return not modified response (etag)', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                noExtension: true
+            })
+        )
+
+        await app.modules
+
+        const request = req('/public/takodachi')
+        request.headers.append('If-None-Match', 'ZGe9eXgawZBlMox8sZg82Q==')
+
+        const res = await app.handle(request)
+
+        expect(res.body).toBe(null)
+        expect(res.status).toBe(304)
+    })
+
+    it('return not modified response (time)', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                noExtension: true
+            })
+        )
+
+        await app.modules
+
+        const tomorrow = new Date()
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const request = req('/public/takodachi')
+        request.headers.append('If-Modified-Since', tomorrow.toString())
+
+        const res = await app.handle(request)
+
+        expect(res.body).toBe(null)
+        expect(res.status).toBe(304)
+    })
+
+    it('return ok response when noCache', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                noExtension: true,
+                noCache: true
+            })
+        )
+
+        await app.modules
+
+        const tomorrow = new Date()
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const request = req('/public/takodachi')
+        request.headers.append('If-None-Match', 'ZGe9eXgawZBlMox8sZg82Q==')
+        request.headers.append('If-Modified-Since', tomorrow.toString())
+
+        const res = await app.handle(request)
+
+        expect(res.status).toBe(200)
+    })
+  
     it('should 404 when navigate to folder', async () => {
 
         const app = new Elysia().use(staticPlugin())
