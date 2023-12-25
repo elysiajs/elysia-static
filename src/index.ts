@@ -157,9 +157,13 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                 return stat(file)
                     .then(
                         (status) =>
-                            new Response(Bun.file(file), {
-                                headers
-                            })
+                            {
+                                if (status.isDirectory()) throw new NotFoundError()
+                                
+                                return new Response(Bun.file(file), {
+                                    headers
+                                })
+                            }
                     )
                     .catch((error) => {
                         throw new NotFoundError()
