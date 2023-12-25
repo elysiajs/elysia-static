@@ -140,7 +140,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                       })
                 : () => new Response(Bun.file(file))
 
-            let fileName = file.replace(resolve(), '').replace(`${assets}/`, '')
+            let fileName = file.replace(resolve(), '').replace(`${assets}/`.replace(resolve(), ''), '')
 
             if (noExtension) {
                 const temp = fileName.split('.')
