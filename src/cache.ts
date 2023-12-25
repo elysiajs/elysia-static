@@ -2,7 +2,7 @@ import { BunFile } from 'bun'
 import { stat } from 'fs/promises'
 
 export async function isCached(
-    headers: Record<string, string | null>,
+    headers: Record<string, string | undefined>,
     etag: string,
     filePath: string
 ) {

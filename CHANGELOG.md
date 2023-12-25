@@ -1,3 +1,17 @@
+# 0.8.1 - 25 Dec 2023
+Feature:
+- `indexHTML` support
+- [#16](https://github.com/elysiajs/elysia-static/pull/16) implement enableDecodeURI
+- [#13](https://github.com/elysiajs/elysia-static/pull/13) prettier and eslint
+
+Bug fix:
+- [#18](https://github.com/elysiajs/elysia-static/pull/18) 404 navigate to folder
+- [#14](https://github.com/elysiajs/elysia-static/pull/14) browser cache
+- [#12](https://github.com/elysiajs/elysia-static/pull/12) always static with assets on an absolute path
+
+# 0.8.0 - 23 Dec 2023
+Change:
+- Add support for Elysia 0.8
 
 # 0.8.0-rc.0 - 15 Dec 2023
 Change:

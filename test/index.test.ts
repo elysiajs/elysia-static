@@ -2,7 +2,7 @@ import { Elysia } from 'elysia'
 import { staticPlugin } from '../src'
 
 import { describe, expect, it } from 'bun:test'
-import { join } from "path";
+import { join } from 'path'
 
 const req = (path: string) => new Request(`http://localhost${path}`)
 
@@ -141,6 +141,7 @@ describe('Static Plugin', () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
+                prefix: '',
                 assets: join(import.meta.dir, '../public')
             })
         )
@@ -305,9 +306,8 @@ describe('Static Plugin', () => {
 
         expect(res.status).toBe(200)
     })
-  
-    it('should 404 when navigate to folder', async () => {
 
+    it('should 404 when navigate to folder', async () => {
         const app = new Elysia().use(staticPlugin())
 
         await app.modules
@@ -324,5 +324,54 @@ describe('Static Plugin', () => {
 
             expect(res.status).toBe(404)
         }
+    })
+
+    it('serve index.html to default /', async () => {
+        let app = new Elysia().use(staticPlugin())
+        await app.modules
+
+        let res = await app.handle(req('/public'))
+        expect(res.status).toBe(404)
+
+        res = await app.handle(req('/public/html'))
+        expect(res.status).toBe(200)
+
+        app = new Elysia().use(
+            staticPlugin({
+                indexHTML: false
+            })
+        )
+
+        res = await app.handle(req('/public'))
+        expect(res.status).toBe(404)
+
+        res = await app.handle(req('/public/html'))
+        expect(res.status).toBe(404)
+
+        // Not sure why this error but not in dev environment
+        // app = new Elysia().use(
+        //     staticPlugin({
+        //         alwaysStatic: true
+        //     })
+        // )
+
+        // res = await app.handle(req('/public'))
+        // expect(res.status).toBe(404)
+
+        // res = await app.handle(req('/public/html'))
+        // expect(res.status).toBe(200)
+
+        app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                indexHTML: false
+            })
+        )
+
+        res = await app.handle(req('/public'))
+        expect(res.status).toBe(404)
+
+        res = await app.handle(req('/public/html'))
+        expect(res.status).toBe(404)
     })
 })

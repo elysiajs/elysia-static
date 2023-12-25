@@ -1,8 +1,32 @@
 import { NotFoundError, Elysia } from 'elysia'
 
-import { readdir, stat } from 'fs/promises'
+import { exists, readdir, stat } from 'fs/promises'
 import { resolve, resolve as resolveFn, join } from 'path'
+import Cache from 'node-cache'
+
 import { generateETag, isCached } from './cache'
+import { Stats } from 'fs'
+
+const statCache = new Cache({
+    useClones: false,
+    checkperiod: 5 * 60,
+    stdTTL: 3 * 60 * 60,
+    maxKeys: 250
+})
+
+const fileCache = new Cache({
+    useClones: false,
+    checkperiod: 5 * 60,
+    stdTTL: 3 * 60 * 60,
+    maxKeys: 250
+})
+
+const htmlCache = new Cache({
+    useClones: false,
+    checkperiod: 5 * 60,
+    stdTTL: 3 * 60 * 60,
+    maxKeys: 250
+})
 
 const listFiles = async (dir: string): Promise<string[]> => {
     const files = await readdir(dir)
@@ -32,7 +56,8 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         enableDecodeURI = false,
         resolve = resolveFn,
         headers = {},
-        noCache = false
+        noCache = false,
+        indexHTML = true
     }: {
         /**
          * @default "public"
@@ -57,7 +82,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         /**
          * @default false
          *
-         * If set to true, file will always use static path instead
+         * Should file always be served statically
          */
         alwaysStatic?: boolean
         /**
@@ -75,9 +100,9 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          */
         noExtension?: boolean
         /**
-         * 
+         *
          * When url needs to be decoded
-         * 
+         *
          * Only works if `alwaysStatic` is set to false
          */
         enableDecodeURI?: boolean
@@ -95,6 +120,12 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          * If set to true, browser caching will be disabled
          */
         noCache?: boolean
+        /**
+         * @default true
+         *
+         * Enable serving of index.html as default / route
+         */
+        indexHTML?: boolean
     } = {
         assets: 'public',
         prefix: '/public' as Prefix,
@@ -105,7 +136,8 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         enableDecodeURI: false,
         resolve: resolveFn,
         headers: {},
-        noCache: false
+        noCache: false,
+        indexHTML: true
     }
 ) => {
     const files = await listFiles(resolveFn(assets))
@@ -130,7 +162,10 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
             alwaysStatic,
             ignorePatterns,
             noExtension,
-            resolve: resolve.toString()
+            resolve: resolve.toString(),
+            headers,
+            noCache,
+            indexHTML
         }
     })
 
@@ -156,27 +191,52 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
             const file = Bun.file(filePath)
             const etag = await generateETag(file)
 
-            app.get(join(prefix, fileName), async ({ headers: reqHeaders }) => {
-                if (noCache) {
-                    return new Response(file, {
-                        headers
-                    })
-                }
+            app.get(
+                join(prefix, fileName),
+                noCache
+                    ? new Response(file, {
+                          headers
+                      })
+                    : async ({ headers: reqHeaders }) => {
+                          if (await isCached(reqHeaders, etag, filePath)) {
+                              return new Response(null, {
+                                  status: 304,
+                                  headers
+                              })
+                          }
 
-                if (await isCached(reqHeaders, etag, filePath)) {
-                    return new Response(null, {
-                        status: 304,
-                        headers
-                    })
-                }
+                          headers['Etag'] = etag
+                          headers['Cache-Control'] = 'public, max-age=0'
 
-                headers['Etag'] = etag
-                headers['Cache-Control'] = 'public, max-age=0'
+                          return new Response(file, {
+                              headers
+                          })
+                      }
+            )
 
-                return new Response(file, {
-                    headers
-                })
-            })
+            if (indexHTML && fileName.endsWith('/index.html'))
+                app.get(
+                    join(prefix, fileName.replace('/index.html', '')),
+                    noCache
+                        ? new Response(file, {
+                              headers
+                          })
+                        : async ({ headers: reqHeaders }) => {
+                              if (await isCached(reqHeaders, etag, filePath)) {
+                                  return new Response(null, {
+                                      status: 304,
+                                      headers
+                                  })
+                              }
+
+                              headers['Etag'] = etag
+                              headers['Cache-Control'] = 'public, max-age=0'
+
+                              return new Response(file, {
+                                  headers
+                              })
+                          }
+                )
         }
     else {
         if (
@@ -184,49 +244,82 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                 ({ method, path }) => path === `${prefix}/*` && method === 'GET'
             )
         )
-            app.onError(() => {}).get(`${prefix}/*`, async ({ params }) => {
-                const file = enableDecodeURI ? decodeURI(`${assets}/${decodeURI(params['*'])}`) : `${assets}/${(params as any)['*']}`
+            app.onError(() => {}).get(
+                `${prefix}/*`,
+                async ({ params, headers: reqHeaders }) => {
+                    const path = enableDecodeURI
+                        ? decodeURI(`${assets}/${decodeURI(params['*'])}`)
+                        : `${assets}/${params['*']}`
 
-                if (shouldIgnore(file)) throw new NotFoundError()
+                    if (shouldIgnore(path)) throw new NotFoundError()
 
-                return stat(file)
-                    .then(
-                        (status) =>
-                            {
-                                if (status.isDirectory()) throw new NotFoundError()
-                                
-                                return new Response(Bun.file(file), {
-                                    headers
-                                })
+                    try {
+                        let status = statCache.get<Stats>(path)
+                        if (!status) {
+                            status = await stat(path)
+                            statCache.set(path, status)
+                        }
+
+                        let file =
+                            fileCache.get<ReturnType<(typeof Bun)['file']>>(
+                                path
+                            )
+
+                        if (!file) {
+                            if (status.isDirectory()) {
+                                let hasCache = false
+
+                                if (
+                                    indexHTML &&
+                                    (hasCache =
+                                        htmlCache.get<boolean>(
+                                            `${path}/index.html`
+                                        ) ??
+                                        (await exists(`${path}/index.html`)))
+                                ) {
+                                    if (hasCache === undefined)
+                                        htmlCache.set(
+                                            `${path}/index.html`,
+                                            true
+                                        )
+
+                                    file = Bun.file(`${path}/index.html`)
+                                } else {
+                                    if (indexHTML && hasCache === undefined)
+                                        htmlCache.set(
+                                            `${path}/index.html`,
+                                            false
+                                        )
+
+                                    throw new NotFoundError()
+                                }
                             }
-                    )
-                    .catch((error) => {
-                        throw new NotFoundError()
-                    }
 
-                    const file = Bun.file(filePath)
+                            file ??= Bun.file(path)
+                            fileCache.set(path, file)
+                        }
 
-                    if (noCache) {
+                        if (noCache)
+                            return new Response(file, {
+                                headers
+                            })
+
+                        const etag = await generateETag(file)
+                        if (await isCached(reqHeaders, etag, path))
+                            return new Response(null, {
+                                status: 304,
+                                headers
+                            })
+
+                        headers['Etag'] = etag
+                        headers['Cache-Control'] = 'public, max-age=0'
+
                         return new Response(file, {
                             headers
                         })
+                    } catch (error) {
+                        throw new NotFoundError()
                     }
-
-                    const etag = await generateETag(file)
-
-                    if (await isCached(reqHeaders, etag, filePath)) {
-                        return new Response(null, {
-                            status: 304,
-                            headers
-                        })
-                    }
-
-                    headers['Etag'] = etag
-                    headers['Cache-Control'] = 'public, max-age=0'
-
-                    return new Response(file, {
-                        headers
-                    })
                 }
             )
     }
