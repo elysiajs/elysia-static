@@ -2,6 +2,7 @@ import { Elysia } from 'elysia'
 import { staticPlugin } from '../src'
 
 import { describe, expect, it } from 'bun:test'
+import { join } from "path";
 
 const req = (path: string) => new Request(`http://localhost${path}`)
 
@@ -134,6 +135,21 @@ describe('Static Plugin', () => {
             .then((r) => r.text())
 
         expect(res).toBe(takodachi)
+    })
+
+    it('always static with assets on an absolute path', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                assets: join(import.meta.dir, '../public')
+            })
+        )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+        const blob = await res.blob()
+        expect(await blob.text()).toBe(takodachi)
     })
 
     it('exclude extension', async () => {
@@ -288,5 +304,25 @@ describe('Static Plugin', () => {
         const res = await app.handle(request)
 
         expect(res.status).toBe(200)
+    })
+  
+    it('should 404 when navigate to folder', async () => {
+
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const notFoundPaths = [
+            '/public',
+            '/public/',
+            '/public/nested',
+            '/public/nested/'
+        ]
+
+        for (const path of notFoundPaths) {
+            const res = await app.handle(req(path))
+
+            expect(res.status).toBe(404)
+        }
     })
 })

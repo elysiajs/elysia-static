@@ -29,6 +29,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         alwaysStatic = false,
         ignorePatterns = ['.DS_Store', '.git', '.env'],
         noExtension = false,
+        enableDecodeURI = false,
         resolve = resolveFn,
         headers = {},
         noCache = false
@@ -74,6 +75,13 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          */
         noExtension?: boolean
         /**
+         * 
+         * When url needs to be decoded
+         * 
+         * Only works if `alwaysStatic` is set to false
+         */
+        enableDecodeURI?: boolean
+        /**
          * Nodejs resolve function
          */
         resolve?: (...pathSegments: string[]) => string
@@ -94,6 +102,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         alwaysStatic: process.env.NODE_ENV === 'production',
         ignorePatterns: [],
         noExtension: false,
+        enableDecodeURI: false,
         resolve: resolveFn,
         headers: {},
         noCache: false
@@ -175,16 +184,23 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                 ({ method, path }) => path === `${prefix}/*` && method === 'GET'
             )
         )
-            app.onError(() => {}).get(
-                `${prefix}/*`,
-                async ({ params, headers: reqHeaders }) => {
-                    const filePath = `${assets}/${params['*']}`
+            app.onError(() => {}).get(`${prefix}/*`, async ({ params }) => {
+                const file = enableDecodeURI ? decodeURI(`${assets}/${decodeURI(params['*'])}`) : `${assets}/${(params as any)['*']}`
 
-                    if (shouldIgnore(filePath)) throw new NotFoundError()
+                if (shouldIgnore(file)) throw new NotFoundError()
 
-                    try {
-                        await stat(filePath)
-                    } catch {
+                return stat(file)
+                    .then(
+                        (status) =>
+                            {
+                                if (status.isDirectory()) throw new NotFoundError()
+                                
+                                return new Response(Bun.file(file), {
+                                    headers
+                                })
+                            }
+                    )
+                    .catch((error) => {
                         throw new NotFoundError()
                     }
 
