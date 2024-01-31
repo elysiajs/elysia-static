@@ -57,6 +57,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         resolve = resolveFn,
         headers = {},
         noCache = false,
+        maxAge = 0,
         indexHTML = true
     }: {
         /**
@@ -120,6 +121,15 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          * If set to true, browser caching will be disabled
          */
         noCache?: boolean
+        /**
+         * @default 0
+         *
+         * Specifies the maximum amount of time in seconds, a resource will be considered fresh.
+         * This freshness lifetime is calculated relative to the time of the request.
+         * This setting helps control browser caching behavior.
+         * A `maxAge` of 0 will prevent caching, requiring requests to validate with the server before use.
+         */
+        maxAge?: number
         /**
          * @default true
          *
@@ -206,7 +216,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                           }
 
                           headers['Etag'] = etag
-                          headers['Cache-Control'] = 'public, max-age=0'
+                          headers['Cache-Control'] = `public, max-age=${maxAge}`
 
                           return new Response(file, {
                               headers
@@ -230,7 +240,8 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                               }
 
                               headers['Etag'] = etag
-                              headers['Cache-Control'] = 'public, max-age=0'
+                              headers['Cache-Control'] =
+                                  `public, max-age=${maxAge}`
 
                               return new Response(file, {
                                   headers
@@ -312,7 +323,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                             })
 
                         headers['Etag'] = etag
-                        headers['Cache-Control'] = 'public, max-age=0'
+                        headers['Cache-Control'] = `public, max-age=${maxAge}`
 
                         return new Response(file, {
                             headers
