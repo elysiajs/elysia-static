@@ -1,11 +1,13 @@
-import { NotFoundError, Elysia } from 'elysia'
+import { Elysia, NotFoundError } from 'elysia'
 
-import { exists, readdir, stat } from 'fs/promises'
-import { resolve, resolve as resolveFn, join } from 'path'
+import { readdir, stat } from 'fs/promises'
+import {  resolve, resolve as resolveFn, join } from 'path'
 import Cache from 'node-cache'
 
 import { generateETag, isCached } from './cache'
 import { Stats } from 'fs'
+
+const fileExists = (path: string) => stat(path).then(() => true, () => false)
 
 const statCache = new Cache({
     useClones: false,
@@ -240,7 +242,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         }
     else {
         if (
-            !app.routes.find(
+            !app.router.history.find(
                 ({ method, path }) => path === `${prefix}/*` && method === 'GET'
             )
         )
@@ -275,7 +277,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                                         htmlCache.get<boolean>(
                                             `${path}/index.html`
                                         ) ??
-                                        (await exists(`${path}/index.html`)))
+                                        (await fileExists(`${path}/index.html`)))
                                 ) {
                                     if (hasCache === undefined)
                                         htmlCache.set(
