@@ -2,7 +2,7 @@ import { Elysia } from 'elysia'
 import { staticPlugin } from '../src'
 
 import { describe, expect, it } from 'bun:test'
-import { join } from 'path'
+import { join, sep } from 'path'
 
 const req = (path: string) => new Request(`http://localhost${path}`)
 
@@ -98,7 +98,7 @@ describe('Static Plugin', () => {
     it('ignore string pattern', async () => {
         const app = new Elysia({ forceErrorEncapsulation: true }).use(
             staticPlugin({
-                ignorePatterns: ['public/takodachi.png']
+                ignorePatterns: [`public${sep}takodachi.png`]
             })
         )
 

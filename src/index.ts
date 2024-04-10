@@ -1,12 +1,13 @@
 import { Elysia, NotFoundError } from 'elysia'
 
 import { readdir, stat } from 'fs/promises'
-import {  resolve, resolve as resolveFn, join } from 'path'
+import {  resolve, resolve as resolveFn, join, sep} from 'path'
 import Cache from 'node-cache'
 
 import { generateETag, isCached } from './cache'
 import { Stats } from 'fs'
 
+const URL_PATH_SEP = '/'
 const fileExists = (path: string) => stat(path).then(() => true, () => false)
 
 const statCache = new Cache({
@@ -35,7 +36,7 @@ const listFiles = async (dir: string): Promise<string[]> => {
 
     const all = await Promise.all(
         files.map(async (name) => {
-            const file = dir + '/' + name
+            const file = dir + sep + name
             const stats = await stat(file)
 
             return stats && stats.isDirectory()
@@ -143,8 +144,9 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
     }
 ) => {
     const files = await listFiles(resolveFn(assets))
+    const isFSSepUnsafe = sep !== URL_PATH_SEP
 
-    if (prefix === '/') prefix = '' as Prefix
+    if (prefix === URL_PATH_SEP) prefix = '' as Prefix
 
     const shouldIgnore = (file: string) => {
         if (!ignorePatterns.length) return false
@@ -181,7 +183,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
 
             let fileName = filePath
                 .replace(resolve(), '')
-                .replace(`${assets}/`, '')
+                .replace(`${assets}${sep}`, '')
 
             if (noExtension) {
                 const temp = fileName.split('.')
@@ -193,8 +195,11 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
             const file = Bun.file(filePath)
             const etag = await generateETag(file)
 
+            const pathName = isFSSepUnsafe ? 
+                prefix + fileName.split(sep).join(URL_PATH_SEP) : 
+                join(prefix, fileName)
             app.get(
-                join(prefix, fileName),
+                pathName,
                 noCache
                     ? new Response(file, {
                           headers
@@ -216,15 +221,15 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                       }
             )
 
-            if (indexHTML && fileName.endsWith('/index.html'))
+            if (indexHTML && pathName.endsWith('/index.html'))
                 app.get(
-                    join(prefix, fileName.replace('/index.html', '')),
+                    join(prefix, pathName.replace('/index.html', '')),
                     noCache
                         ? new Response(file, {
                               headers
                           })
                         : async ({ headers: reqHeaders }) => {
-                              if (await isCached(reqHeaders, etag, filePath)) {
+                              if (await isCached(reqHeaders, etag, pathName)) {
                                   return new Response(null, {
                                       status: 304,
                                       headers
@@ -249,10 +254,15 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
             app.onError(() => {}).get(
                 `${prefix}/*`,
                 async ({ params, headers: reqHeaders }) => {
-                    const path = enableDecodeURI
+                    let path = enableDecodeURI
                         ? decodeURI(`${assets}/${decodeURI(params['*'])}`)
                         : `${assets}/${params['*']}`
+                    // Handle varying filepath separators
+                    if (isFSSepUnsafe) {
+                        path = path.replace(URL_PATH_SEP, sep)
+                    }
 
+                    // Note that path must match the system separator
                     if (shouldIgnore(path)) throw new NotFoundError()
 
                     try {
@@ -275,21 +285,21 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                                     indexHTML &&
                                     (hasCache =
                                         htmlCache.get<boolean>(
-                                            `${path}/index.html`
+                                            `${path}${sep}index.html`
                                         ) ??
-                                        (await fileExists(`${path}/index.html`)))
+                                        (await fileExists(`${path}${sep}index.html`)))
                                 ) {
                                     if (hasCache === undefined)
                                         htmlCache.set(
-                                            `${path}/index.html`,
+                                            `${path}${sep}index.html`,
                                             true
                                         )
 
-                                    file = Bun.file(`${path}/index.html`)
+                                    file = Bun.file(`${path}${sep}index.html`)
                                 } else {
                                     if (indexHTML && hasCache === undefined)
                                         htmlCache.set(
-                                            `${path}/index.html`,
+                                            `${path}${sep}index.html`,
                                             false
                                         )
 
