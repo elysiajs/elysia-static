@@ -252,7 +252,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
 
                           headers['Etag'] = etag
                           headers['Cache-Control'] = directive
-                          if (maxAge)
+                          if (maxAge !== null)
                               headers['Cache-Control'] += `, max-age=${maxAge}`
 
                           return new Response(file, {
@@ -278,7 +278,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
 
                               headers['Etag'] = etag
                               headers['Cache-Control'] = directive
-                              if (maxAge)
+                              if (maxAge !== null)
                                   headers[
                                       'Cache-Control'
                                   ] += `, max-age=${maxAge}`
@@ -371,7 +371,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
 
                         headers['Etag'] = etag
                         headers['Cache-Control'] = directive
-                        if (maxAge)
+                        if (maxAge !== null)
                             headers['Cache-Control'] += `, max-age=${maxAge}`
 
                         return new Response(file, {

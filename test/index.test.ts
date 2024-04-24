@@ -272,7 +272,37 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/public/takodachi'))
 
-        expect(res.headers.get('Cache-Control')).toBe('public, max-age=0')
+        expect(res.headers.get('Cache-Control')).toBe('public, max-age=86400')
+        expect(res.status).toBe(200)
+    })
+
+    it('skip Cache-Control header when maxAge is null', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                maxAge: null
+            })
+        )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+
+        expect(res.headers.get('Cache-Control')).toBe('public')
+        expect(res.status).toBe(200)
+    })
+
+    it('set cache directive', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                directive: 'private'
+            })
+        )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+
+        expect(res.headers.get('Cache-Control')).toBe('private, max-age=86400')
         expect(res.status).toBe(200)
     })
 
