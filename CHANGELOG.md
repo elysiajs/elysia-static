@@ -1,4 +1,10 @@
 
+# 1.0.3 - 24 Apr 2024
+Improvement:
+- [#26](https://github.com/elysiajs/elysia-static/pull/26) support system paths (windows)
+- [#25](https://github.com/elysiajs/elysia-static/pull/24) add maxAge param
+- add cache-control directive
+
 # 1.0.0 - 16 Mar 2024
 Change:
 - Add support for Elysia 1.0

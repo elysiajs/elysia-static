@@ -12,31 +12,22 @@ export async function isCached(
     if (
         headers['cache-control'] &&
         headers['cache-control'].indexOf('no-cache') !== -1
-    ) {
+    )
         return false
-    }
 
     // if-none-match
     if ('if-none-match' in headers) {
         const ifNoneMatch = headers['if-none-match']
 
-        if (ifNoneMatch === '*') {
-            return true
-        }
+        if (ifNoneMatch === '*') return true
 
-        if (ifNoneMatch === null) {
-            return false
-        }
+        if (ifNoneMatch === null) return false
 
-        if (typeof etag !== 'string') {
-            return false
-        }
+        if (typeof etag !== 'string') return false
 
         const isMatching = ifNoneMatch === etag
 
-        if (isMatching) {
-            return true
-        }
+        if (isMatching) return true
 
         /**
          * A recipient MUST ignore If-Modified-Since if the request contains an
@@ -63,9 +54,8 @@ export async function isCached(
         if (
             lastModified !== undefined &&
             lastModified.getTime() <= Date.parse(ifModifiedSince)
-        ) {
+        )
             return true
-        }
     }
 
     return false

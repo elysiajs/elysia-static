@@ -1,14 +1,18 @@
 import { Elysia, NotFoundError } from 'elysia'
 
 import { readdir, stat } from 'fs/promises'
-import {  resolve, resolve as resolveFn, join, sep} from 'path'
+import { resolve, resolve as resolveFn, join, sep } from 'path'
 import Cache from 'node-cache'
 
 import { generateETag, isCached } from './cache'
 import { Stats } from 'fs'
 
 const URL_PATH_SEP = '/'
-const fileExists = (path: string) => stat(path).then(() => true, () => false)
+const fileExists = (path: string) =>
+    stat(path).then(
+        () => true,
+        () => false
+    )
 
 const statCache = new Cache({
     useClones: false,
@@ -60,7 +64,8 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         resolve = resolveFn,
         headers = {},
         noCache = false,
-        maxAge = 0,
+        maxAge = 86400,
+        directive = 'public',
         indexHTML = true
     }: {
         /**
@@ -125,14 +130,33 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          */
         noCache?: boolean
         /**
-         * @default 0
+         * @default public
+         *
+         * directive for Cache-Control header
+         *
+         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#directives
+         */
+        directive?:
+            | 'public'
+            | 'private'
+            | 'must-revalidate'
+            | 'no-cache'
+            | 'no-store'
+            | 'no-transform'
+            | 'proxy-revalidate'
+            | 'immutable'
+        /**
+         * @default 86400
          *
          * Specifies the maximum amount of time in seconds, a resource will be considered fresh.
          * This freshness lifetime is calculated relative to the time of the request.
          * This setting helps control browser caching behavior.
          * A `maxAge` of 0 will prevent caching, requiring requests to validate with the server before use.
          */
-        maxAge?: number
+        maxAge?: number | null
+        /**
+         *
+         */
         /**
          * @default true
          *
@@ -176,9 +200,12 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
             alwaysStatic,
             ignorePatterns,
             noExtension,
+            enableDecodeURI,
             resolve: resolve.toString(),
             headers,
             noCache,
+            maxAge,
+            directive,
             indexHTML
         }
     })
@@ -205,9 +232,10 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
             const file = Bun.file(filePath)
             const etag = await generateETag(file)
 
-            const pathName = isFSSepUnsafe ? 
-                prefix + fileName.split(sep).join(URL_PATH_SEP) : 
-                join(prefix, fileName)
+            const pathName = isFSSepUnsafe
+                ? prefix + fileName.split(sep).join(URL_PATH_SEP)
+                : join(prefix, fileName)
+
             app.get(
                 pathName,
                 noCache
@@ -223,7 +251,9 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                           }
 
                           headers['Etag'] = etag
-                          headers['Cache-Control'] = `public, max-age=${maxAge}`
+                          headers['Cache-Control'] = directive
+                          if (maxAge)
+                              headers['Cache-Control'] += `, max-age=${maxAge}`
 
                           return new Response(file, {
                               headers
@@ -247,8 +277,11 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                               }
 
                               headers['Etag'] = etag
-                              headers['Cache-Control'] =
-                                  `public, max-age=${maxAge}`
+                              headers['Cache-Control'] = directive
+                              if (maxAge)
+                                  headers[
+                                      'Cache-Control'
+                                  ] += `, max-age=${maxAge}`
 
                               return new Response(file, {
                                   headers
@@ -298,7 +331,9 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                                         htmlCache.get<boolean>(
                                             `${path}${sep}index.html`
                                         ) ??
-                                        (await fileExists(`${path}${sep}index.html`)))
+                                        (await fileExists(
+                                            `${path}${sep}index.html`
+                                        )))
                                 ) {
                                     if (hasCache === undefined)
                                         htmlCache.set(
@@ -335,7 +370,9 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                             })
 
                         headers['Etag'] = etag
-                        headers['Cache-Control'] = `public, max-age=${maxAge}`
+                        headers['Cache-Control'] = directive
+                        if (maxAge)
+                            headers['Cache-Control'] += `, max-age=${maxAge}`
 
                         return new Response(file, {
                             headers
