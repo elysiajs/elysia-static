@@ -452,7 +452,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(request)
         expect(res.status).toBe(206)
-        expect(res.headers.get('Content-Range')).toBe('bytes 100-200/71118')
+        expect(res.headers.get('Content-Range')).toBe('bytes 100-199/71118')
 
         const body = await res.blob()
         expect(body.size).toBe(100)

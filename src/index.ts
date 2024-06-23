@@ -65,7 +65,7 @@ const createRangeResponse = async (
         .split('-') // ["0", "100"]
         .map(Number) // [0, 100]
 
-    headers['Content-Range'] = `bytes ${start}-${end}/${file.size}`
+    headers['Content-Range'] = `bytes ${start}-${end - 1}/${file.size}`
     return new Response(file.slice(start, end), {
         headers,
         status: 206
