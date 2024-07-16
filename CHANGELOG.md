@@ -1,4 +1,14 @@
 
+# 1.1.0 - 16 Jul 2024
+Change:
+- Add support for Elysia 1.1
+
+
+# 1.1.0-rc.0 - 12 Jul 2024
+Change:
+- Add support for Elysia 1.1
+
+
 # 1.0.3 - 24 Apr 2024
 Improvement:
 - [#26](https://github.com/elysiajs/elysia-static/pull/26) support system paths (windows)

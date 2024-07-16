@@ -5,7 +5,7 @@ import { resolve, resolve as resolveFn, join, sep } from 'path'
 import Cache from 'node-cache'
 
 import { generateETag, isCached } from './cache'
-import { Stats } from 'fs'
+import type { Stats } from 'fs'
 
 const URL_PATH_SEP = '/'
 const fileExists = (path: string) =>
@@ -57,7 +57,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         assets = 'public',
         prefix = '/public' as Prefix,
         staticLimit = 1024,
-        alwaysStatic = false,
+        alwaysStatic = process.env.NODE_ENV === 'production',
         ignorePatterns = ['.DS_Store', '.git', '.env'],
         noExtension = false,
         enableDecodeURI = false,
