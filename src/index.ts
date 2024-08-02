@@ -311,11 +311,11 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                     if (shouldIgnore(path)) throw new NotFoundError()
 
                     try {
-                        let status = statCache.get<Stats>(path)
-                        if (!status) {
+                        let fileStat = statCache.get<Stats>(path)
+                        if (!fileStat) {
                             try {
-                                status = await stat(path)
-                                statCache.set(path, status)
+                                fileStat = await stat(path)
+                                statCache.set(path, fileStat)
                             } catch {
                                 throw new NotFoundError()
                             }
@@ -327,7 +327,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                             )
 
                         if (!file) {
-                            if (status.isDirectory()) {
+                            if (fileStat.isDirectory()) {
                                 let hasCache = false
 
                                 if (
