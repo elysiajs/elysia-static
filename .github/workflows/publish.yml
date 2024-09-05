@@ -45,6 +45,11 @@ jobs:
           bun-version: latest
           registry-url: "https://registry.npmjs.org"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Install packages
         run: bun install
 
@@ -54,8 +59,10 @@ jobs:
       - name: Test
         run: bun run test
 
+      - run: npm ci
+
       - name: 'Publish'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          npm publish --access=public
+          npm publish --provenance --access=public
