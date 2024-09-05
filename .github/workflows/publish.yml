@@ -8,6 +8,9 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  id-token: write
+
 env:
   # Enable debug logging for actions
   ACTIONS_RUNNER_DEBUG: true
