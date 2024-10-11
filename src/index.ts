@@ -90,6 +90,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         staticLimit?: number
         /**
          * @default false
+         * @default true when `NODE_ENV` is 'production'
          *
          * Should file always be served statically
          */
@@ -263,7 +264,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
 
             if (indexHTML && pathName.endsWith('/index.html'))
                 app.get(
-                    join(prefix, pathName.replace('/index.html', '')),
+                    pathName.slice(0, -11),
                     noCache
                         ? new Response(file, {
                               headers
