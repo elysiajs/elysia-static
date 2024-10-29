@@ -21,10 +21,12 @@
         }
     },
     "dependencies": {
-        "node-cache": "^5.1.2"
+        "node-cache": "^5.1.2",
+        "path-browserify": "^1.0.1"
     },
     "devDependencies": {
         "@types/bun": "1.1.6",
+        "@types/path-browserify": "^1.0.3",
         "@typescript-eslint/eslint-plugin": "^6.7.4",
         "elysia": ">= 1.1.0-rc.2",
         "eslint": "9.6.0",
