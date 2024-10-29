@@ -1,7 +1,7 @@
 import { Elysia, NotFoundError } from 'elysia'
 
 import { readdir, stat } from 'fs/promises'
-import { resolve, resolve as resolveFn, join, sep } from 'path'
+import { resolve, resolve as resolveFn, join, sep } from 'path-browserify'
 import Cache from 'node-cache'
 
 import { generateETag, isCached } from './cache'
