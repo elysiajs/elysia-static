@@ -264,7 +264,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
 
             if (indexHTML && pathName.endsWith('/index.html'))
                 app.get(
-                    pathName.slice(0, -11),
+                    pathName.slice(0, -'/index.html'.length),
                     noCache
                         ? new Response(file, {
                               headers
