@@ -96,7 +96,7 @@ describe('Static Plugin', () => {
     })
 
     it('ignore string pattern', async () => {
-        const app = new Elysia({ forceErrorEncapsulation: true }).use(
+        const app = new Elysia().use(
             staticPlugin({
                 ignorePatterns: [`public${sep}takodachi.png`]
             })
