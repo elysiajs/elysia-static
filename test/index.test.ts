@@ -141,7 +141,6 @@ describe('Static Plugin', () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                prefix: '',
                 assets: join(import.meta.dir, '../public')
             })
         )
@@ -390,7 +389,7 @@ describe('Static Plugin', () => {
     })
 
     it('serve index.html to default /', async () => {
-        let app = new Elysia().use(staticPlugin())
+        const app = new Elysia().use(staticPlugin())
         await app.modules
 
         let res = await app.handle(req('/public'))
@@ -398,40 +397,48 @@ describe('Static Plugin', () => {
 
         res = await app.handle(req('/public/html'))
         expect(res.status).toBe(200)
+    })
 
-        app = new Elysia().use(
+    it('does not serve index.html to default / when not indexHTML', async () => {
+        const app = new Elysia().use(
             staticPlugin({
                 indexHTML: false
             })
         )
+        await app.modules
 
-        res = await app.handle(req('/public'))
+        let res = await app.handle(req('/public'))
         expect(res.status).toBe(404)
 
         res = await app.handle(req('/public/html'))
         expect(res.status).toBe(404)
+    })
 
-        // Not sure why this error but not in dev environment
-        // app = new Elysia().use(
-        //     staticPlugin({
-        //         alwaysStatic: true
-        //     })
-        // )
+    it('serves index.html to default / when alwaysStatic', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true
+            })
+        )
+        await app.modules
 
-        // res = await app.handle(req('/public'))
-        // expect(res.status).toBe(404)
+        let res = await app.handle(req('/public'))
+        expect(res.status).toBe(404)
 
-        // res = await app.handle(req('/public/html'))
-        // expect(res.status).toBe(200)
+        res = await app.handle(req('/public/html'))
+        expect(res.status).toBe(200)
+    })
 
-        app = new Elysia().use(
+    it('does not serve index.html to default / when alwaysStatic and not indexHTML', async () => {
+        const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
                 indexHTML: false
             })
         )
+        await app.modules
 
-        res = await app.handle(req('/public'))
+        let res = await app.handle(req('/public'))
         expect(res.status).toBe(404)
 
         res = await app.handle(req('/public/html'))
