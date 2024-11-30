@@ -210,17 +210,15 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         }
     })
 
+    const assetsDir = assets[0] === sep ? assets : resolve() + sep + assets
+
     if (
         alwaysStatic ||
         (process.env.ENV === 'production' && files.length <= staticLimit)
     )
-        for (let i = 0; i < files.length; i++) {
-            const filePath = files[i]
+        for (const filePath of files) {
             if (!filePath || shouldIgnore(filePath)) continue
-
-            let fileName = filePath
-                .replace(resolve(), '')
-                .replace(`${assets}${sep}`, '')
+            let fileName = filePath.replace(assetsDir, '')
 
             if (noExtension) {
                 const temp = fileName.split('.')
@@ -263,7 +261,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
 
             if (indexHTML && pathName.endsWith('/index.html'))
                 app.get(
-                    join(prefix, pathName.replace('/index.html', '')),
+                    pathName.replace('/index.html', ''),
                     noCache
                         ? new Response(file, {
                               headers
@@ -315,6 +313,9 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                             status = await stat(path)
                             statCache.set(path, status)
                         }
+
+                        if (!indexHTML && status.isDirectory())
+                            throw new NotFoundError()
 
                         let file =
                             fileCache.get<ReturnType<(typeof Bun)['file']>>(
