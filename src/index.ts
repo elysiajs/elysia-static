@@ -89,7 +89,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          */
         staticLimit?: number
         /**
-         * @default false
+         * @default false unless `NODE_ENV` is 'production'
          *
          * Should file always be served statically
          */
@@ -216,23 +216,23 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         alwaysStatic ||
         (process.env.ENV === 'production' && files.length <= staticLimit)
     )
-        for (const filePath of files) {
-            if (!filePath || shouldIgnore(filePath)) continue
-            let fileName = filePath.replace(assetsDir, '')
+        for (const absolutePath of files) {
+            if (!absolutePath || shouldIgnore(absolutePath)) continue
+            let relativePath = absolutePath.replace(assetsDir, '')
 
             if (noExtension) {
-                const temp = fileName.split('.')
+                const temp = relativePath.split('.')
                 temp.splice(-1)
 
-                fileName = temp.join('.')
+                relativePath = temp.join('.')
             }
 
-            const file = Bun.file(filePath)
+            const file = Bun.file(absolutePath)
             const etag = await generateETag(file)
 
             const pathName = isFSSepUnsafe
-                ? prefix + fileName.split(sep).join(URL_PATH_SEP)
-                : join(prefix, fileName)
+                ? prefix + relativePath.split(sep).join(URL_PATH_SEP)
+                : join(prefix, relativePath)
 
             app.get(
                 pathName,
@@ -241,7 +241,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                           headers
                       })
                     : async ({ headers: reqHeaders }) => {
-                          if (await isCached(reqHeaders, etag, filePath)) {
+                          if (await isCached(reqHeaders, etag, absolutePath)) {
                               return new Response(null, {
                                   status: 304,
                                   headers
