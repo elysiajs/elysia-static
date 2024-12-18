@@ -1,3 +1,6 @@
+# 1.1.2 - 18 Dec 2024
+Bug fix:
+- [#40](https://github.com/elysiajs/elysia-static/pull/40) serve indexHTML
 
 # 1.1.0 - 16 Jul 2024
 Change:
@@ -7,7 +10,6 @@ Change:
 # 1.1.0-rc.0 - 12 Jul 2024
 Change:
 - Add support for Elysia 1.1
-
 
 # 1.0.3 - 24 Apr 2024
 Improvement:

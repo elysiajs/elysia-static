@@ -1,4 +1,4 @@
-name: Publish Experimental
+name: Publish
 
 on:
   release:
@@ -16,25 +16,6 @@ env:
   ACTIONS_RUNNER_DEBUG: true
 
 jobs:
-  changelog:
-    name: 'Generate Changelog'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Generate Changelog
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bunx changelogithub --no-group
-        continue-on-error: true
-
   publish-npm:
     name: 'Publish: npm Registry'
     runs-on: ubuntu-latest
