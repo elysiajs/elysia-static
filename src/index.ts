@@ -52,6 +52,26 @@ const listFiles = async (dir: string): Promise<string[]> => {
     return all.flat()
 }
 
+const createRangeResponse = async (
+    file: Blob,
+    range: string,
+    headers: Record<string, string>
+) => {
+    // from https://bun.sh/docs/api/http#streaming-files
+    // parse `Range` header
+    const [start = 0, end = Infinity] = range
+        .split('=') // ["Range: bytes", "0-100"]
+        .at(-1)! // "0-100"
+        .split('-') // ["0", "100"]
+        .map(Number) // [0, 100]
+
+    headers['Content-Range'] = `bytes ${start}-${end - 1}/${file.size}`
+    return new Response(file.slice(start, end), {
+        headers,
+        status: 206
+    })
+}
+
 export const staticPlugin = async <Prefix extends string = '/prefix'>(
     {
         assets = 'public',
@@ -234,12 +254,22 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                 ? prefix + relativePath.split(sep).join(URL_PATH_SEP)
                 : join(prefix, relativePath)
 
+            let responseSingleton: Response
+
             app.get(
                 pathName,
                 noCache
-                    ? new Response(file, {
-                          headers
-                      })
+                    ? ({ headers: reqHeaders }) => {
+                          return !reqHeaders.range
+                              ? (responseSingleton ??= new Response(file, {
+                                    headers
+                                }))
+                              : createRangeResponse(
+                                    file,
+                                    reqHeaders['range'],
+                                    headers
+                                )
+                      }
                     : async ({ headers: reqHeaders }) => {
                           if (await isCached(reqHeaders, etag, absolutePath)) {
                               return new Response(null, {
@@ -253,9 +283,15 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                           if (maxAge !== null)
                               headers['Cache-Control'] += `, max-age=${maxAge}`
 
-                          return new Response(file, {
-                              headers
-                          })
+                          return !reqHeaders.range
+                              ? new Response(file, {
+                                    headers
+                                })
+                              : createRangeResponse(
+                                    file,
+                                    reqHeaders['range'],
+                                    headers
+                                )
                       }
             )
 
@@ -360,9 +396,15 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                         }
 
                         if (noCache)
-                            return new Response(file, {
-                                headers
-                            })
+                            return !reqHeaders.range
+                                ? new Response(file, {
+                                      headers
+                                  })
+                                : createRangeResponse(
+                                      file,
+                                      reqHeaders['range'],
+                                      headers
+                                  )
 
                         const etag = await generateETag(file)
                         if (await isCached(reqHeaders, etag, path))
@@ -376,9 +418,15 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                         if (maxAge !== null)
                             headers['Cache-Control'] += `, max-age=${maxAge}`
 
-                        return new Response(file, {
-                            headers
-                        })
+                        return !reqHeaders.range
+                            ? new Response(file, {
+                                  headers
+                              })
+                            : createRangeResponse(
+                                  file,
+                                  reqHeaders['range'],
+                                  headers
+                              )
                     } catch (error) {
                         throw new NotFoundError()
                     }
