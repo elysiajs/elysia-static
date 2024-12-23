@@ -1,6 +1,6 @@
 {
     "name": "@elysiajs/static",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "license": "MIT",
     "scripts": {
         "dev": "bun run --hot example/index.ts",
@@ -24,15 +24,15 @@
         "node-cache": "^5.1.2"
     },
     "devDependencies": {
-        "@types/bun": "1.1.6",
+        "@types/bun": "1.1.14",
         "@typescript-eslint/eslint-plugin": "^6.7.4",
-        "elysia": ">= 1.1.0-rc.2",
+        "elysia": ">= 1.2.0",
         "eslint": "9.6.0",
         "tsup": "^8.1.0",
         "typescript": "^5.5.3"
     },
     "peerDependencies": {
-        "elysia": ">= 1.1.0"
+        "elysia": ">= 1.2.0"
     },
     "keywords": [
         "elysia",

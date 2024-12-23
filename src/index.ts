@@ -277,9 +277,8 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                               headers['Etag'] = etag
                               headers['Cache-Control'] = directive
                               if (maxAge !== null)
-                                  headers[
-                                      'Cache-Control'
-                                  ] += `, max-age=${maxAge}`
+                                  headers['Cache-Control'] +=
+                                      `, max-age=${maxAge}`
 
                               return new Response(file, {
                                   headers
@@ -297,8 +296,10 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                 `${prefix}/*`,
                 async ({ params, headers: reqHeaders }) => {
                     let path = enableDecodeURI
-                        ? decodeURI(`${assets}/${decodeURI(params['*'])}`)
-                        : `${assets}/${params['*']}`
+                        ? // @ts-ignore
+                          decodeURI(`${assets}/${decodeURI(params['*'])}`)
+                        : // @ts-ignore
+                          `${assets}/${params['*']}`
                     // Handle varying filepath separators
                     if (isFSSepUnsafe) {
                         path = path.replace(URL_PATH_SEP, sep)
