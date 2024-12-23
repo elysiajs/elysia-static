@@ -36,14 +36,15 @@ const htmlCache = new Cache({
 })
 
 const listFiles = async (dir: string): Promise<string[]> => {
-    const files = await readdir(dir)
+    const files = await readdir(dir).catch(() => [])
 
     const all = await Promise.all(
         files.map(async (name) => {
             const file = dir + sep + name
-            const stats = await stat(file)
+            const stats = await stat(file).catch(() => null)
+            if (!stats) return []
 
-            return stats && stats.isDirectory()
+            return stats.isDirectory()
                 ? await listFiles(file)
                 : [resolve(dir, file)]
         })
@@ -309,10 +310,14 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                     if (shouldIgnore(path)) throw new NotFoundError()
 
                     try {
-                        let status = statCache.get<Stats>(path)
-                        if (!status) {
-                            status = await stat(path)
-                            statCache.set(path, status)
+                        let fileStat = statCache.get<Stats>(path)
+                        if (!fileStat) {
+                            try {
+                                fileStat = await stat(path)
+                                statCache.set(path, fileStat)
+                            } catch {
+                                throw new NotFoundError()
+                            }
                         }
 
                         if (!indexHTML && status.isDirectory())
@@ -324,7 +329,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                             )
 
                         if (!file) {
-                            if (status.isDirectory()) {
+                            if (fileStat.isDirectory()) {
                                 let hasCache = false
 
                                 if (
@@ -380,6 +385,8 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
                             headers
                         })
                     } catch (error) {
+                        if (error instanceof NotFoundError) throw error
+                        console.error(`Error in @elysiajs/static`, error)
                         throw new NotFoundError()
                     }
                 }
