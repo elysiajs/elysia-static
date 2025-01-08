@@ -98,7 +98,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
          * @default [] `Array<string | RegExp>`
          *
          * Array of file to ignore publication.
-         * If one of the patters is matched,
+         * If one of the patterns is matched,
          * file will not be exposed.
          */
         ignorePatterns?: Array<string | RegExp>
