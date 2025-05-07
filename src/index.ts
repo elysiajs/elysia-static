@@ -210,7 +210,7 @@ export const staticPlugin = async <Prefix extends string = '/prefix'>(
         }
     })
 
-    const assetsDir = assets[0] === sep ? assets : resolve() + sep + assets
+    const assetsDir = assets[0] === sep ? assets : resolve(assets)
 
     if (
         alwaysStatic ||
