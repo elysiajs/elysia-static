@@ -444,4 +444,24 @@ describe('Static Plugin', () => {
         res = await app.handle(req('/public/html'))
         expect(res.status).toBe(404)
     })
+
+    it.each([
+        [{}],
+        [{ alwaysStatic: true }],
+        [{ noCache: true }],
+        [{ alwaysStatic: true, noCache: true }]
+    ])('should work with range requests', async (options) => {
+        const app = new Elysia().use(staticPlugin(options))
+        await app.modules
+
+        const request = req('/public/takodachi.png')
+        request.headers.append('Range', 'bytes=100-200')
+
+        const res = await app.handle(request)
+        expect(res.status).toBe(206)
+        expect(res.headers.get('Content-Range')).toBe('bytes 100-199/71118')
+
+        const body = await res.blob()
+        expect(body.size).toBe(100)
+    })
 })
