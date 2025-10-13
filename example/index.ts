@@ -5,11 +5,8 @@ import { staticPlugin } from '../src/index'
 import html from '../public/html/index.html'
 
 const app = new Elysia()
-	.get('', html)
     .use(
-        staticPlugin({
-            alwaysStatic: true
-        })
+        await staticPlugin()
     )
     .listen(3000)
 

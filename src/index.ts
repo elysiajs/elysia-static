@@ -50,7 +50,6 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
     const [fs, path] = builtinModule
 
-    const statCache = new LRUCache<string, Stats>()
     const fileCache = new LRUCache<string, Response>()
 
     if (prefix === path.sep) prefix = '' as Prefix
@@ -256,14 +255,8 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (cache) return cache.clone()
 
                 try {
-                    let fileStat = statCache.get(pathName)
-                    if (!fileStat)
-                        try {
-                            fileStat = await fs.stat(pathName)
-                            statCache.set(pathName, fileStat)
-                        } catch {
-                            throw new NotFoundError()
-                        }
+                    const fileStat = await fs.stat(pathName).catch(() => null)
+                    if (!fileStat) throw new NotFoundError()
 
                     if (!indexHTML && fileStat.isDirectory())
                         throw new NotFoundError()
