@@ -9,7 +9,7 @@
         "build": "bun build.ts",
         "release": "npm run build && npm run test && npm publish --access public"
     },
-    "main": "./dist/cjs/index.js",
+    "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "module": "./dist/index.js",
     "exports": {
