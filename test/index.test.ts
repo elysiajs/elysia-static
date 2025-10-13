@@ -4,9 +4,7 @@ import { staticPlugin } from '../src'
 import { describe, expect, it } from 'bun:test'
 import { join, sep } from 'path'
 
-const req = (path: string) => new Request(`http://localhost${path}`)
-
-const takodachi = await Bun.file('public/takodachi.png').text()
+import { req, takodachi } from './utils'
 
 describe('Static Plugin', () => {
     it('should get root path', async () => {
@@ -156,7 +154,7 @@ describe('Static Plugin', () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                noExtension: true
+                extension: false
             })
         )
 
@@ -174,7 +172,7 @@ describe('Static Plugin', () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                noExtension: true,
+                extension: false,
                 headers: {
                     ['x-powered-by']: 'Takodachi'
                 }
@@ -213,7 +211,7 @@ describe('Static Plugin', () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                noExtension: true
+                extension: false
             })
         )
 
@@ -225,12 +223,12 @@ describe('Static Plugin', () => {
         expect(res.status).toBe(200)
     })
 
-    it('return no etag header when noCache', async () => {
+    it('return no etag header when etag is false', async () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                noExtension: true,
-                noCache: true
+                extension: false,
+                etag: false
             })
         )
 
@@ -246,7 +244,7 @@ describe('Static Plugin', () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                noExtension: true,
+                extension: false,
                 maxAge: 3600
             })
         )
@@ -263,7 +261,7 @@ describe('Static Plugin', () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                noExtension: true
+                extension: false
             })
         )
 
@@ -309,7 +307,7 @@ describe('Static Plugin', () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                noExtension: true
+                extension: false
             })
         )
 
@@ -328,7 +326,7 @@ describe('Static Plugin', () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                noExtension: true
+                extension: false
             })
         )
 
@@ -346,12 +344,12 @@ describe('Static Plugin', () => {
         expect(res.status).toBe(304)
     })
 
-    it('return ok response when noCache', async () => {
+    it('return ok response when etag is false', async () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                noExtension: true,
-                noCache: true
+                extension: false,
+                etag: false
             })
         )
 

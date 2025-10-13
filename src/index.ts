@@ -1,396 +1,285 @@
 import { Elysia, NotFoundError } from 'elysia'
 
-import { readdir, stat } from 'fs/promises'
-import { resolve, resolve as resolveFn, join, sep } from 'path'
-import Cache from 'node-cache'
+import fastDecodeURI from 'fast-decode-uri-component'
 
-import { generateETag, isCached } from './cache'
-import type { Stats } from 'fs'
+import {
+    fileCache,
+    fileExists,
+    getBuiltinModule,
+    listFiles,
+    statCache,
+    generateETag,
+    isCached,
+    getFile,
+    isBun,
+    listHTMLFiles,
+    isNotEmpty
+} from './utils'
+import type { StaticOptions } from './types'
 
-const URL_PATH_SEP = '/'
-const fileExists = (path: string) =>
-    stat(path).then(
-        () => true,
-        () => false
-    )
+export async function staticPlugin<const Prefix extends string = '/prefix'>({
+    assets = 'public',
+    prefix = '/public' as Prefix,
+    staticLimit = 1024,
+    alwaysStatic = process.env.NODE_ENV === 'production',
+    ignorePatterns = ['.DS_Store', '.git', '.env'],
+    headers: initialHeaders,
+    maxAge = 86400,
+    directive = 'public',
+    etag: useETag = true,
+    extension = true,
+    indexHTML = true,
+    decodeURI,
+    silent
+}: StaticOptions<Prefix> = {}): Promise<Elysia> {
+    if (
+        typeof process === 'undefined' ||
+        typeof process.getBuiltinModule === 'undefined'
+    ) {
+        if (!silent)
+            console.warn(
+                '@elysiajs/static require process.getBuiltinModule to be available.'
+            )
 
-const statCache = new Cache({
-    useClones: false,
-    checkperiod: 5 * 60,
-    stdTTL: 3 * 60 * 60,
-    maxKeys: 250
-})
-
-const fileCache = new Cache({
-    useClones: false,
-    checkperiod: 5 * 60,
-    stdTTL: 3 * 60 * 60,
-    maxKeys: 250
-})
-
-const htmlCache = new Cache({
-    useClones: false,
-    checkperiod: 5 * 60,
-    stdTTL: 3 * 60 * 60,
-    maxKeys: 250
-})
-
-const listFiles = async (dir: string): Promise<string[]> => {
-    const files = await readdir(dir).catch(() => [])
-
-    const all = await Promise.all(
-        files.map(async (name) => {
-            const file = dir + sep + name
-            const stats = await stat(file).catch(() => null)
-            if (!stats) return []
-
-            return stats.isDirectory()
-                ? await listFiles(file)
-                : [resolve(dir, file)]
-        })
-    )
-
-    return all.flat()
-}
-
-export const staticPlugin = async <Prefix extends string = '/prefix'>(
-    {
-        assets = 'public',
-        prefix = '/public' as Prefix,
-        staticLimit = 1024,
-        alwaysStatic = process.env.NODE_ENV === 'production',
-        ignorePatterns = ['.DS_Store', '.git', '.env'],
-        noExtension = false,
-        enableDecodeURI = false,
-        resolve = resolveFn,
-        headers = {},
-        noCache = false,
-        maxAge = 86400,
-        directive = 'public',
-        indexHTML = true
-    }: {
-        /**
-         * @default "public"
-         *
-         * Asset path to expose as public path
-         */
-        assets?: string
-        /**
-         * @default '/public'
-         *
-         * Path prefix to create virtual mount path for the static directory
-         */
-        prefix?: Prefix
-        /**
-         * @default 1024
-         *
-         * If total files exceed this number,
-         * file will be handled via wildcard instead of static route
-         * to reduce memory usage
-         */
-        staticLimit?: number
-        /**
-         * @default false unless `NODE_ENV` is 'production'
-         *
-         * Should file always be served statically
-         */
-        alwaysStatic?: boolean
-        /**
-         * @default [] `Array<string | RegExp>`
-         *
-         * Array of file to ignore publication.
-         * If one of the patters is matched,
-         * file will not be exposed.
-         */
-        ignorePatterns?: Array<string | RegExp>
-        /**
-         * Indicate if file extension is required
-         *
-         * Only works if `alwaysStatic` is set to true
-         */
-        noExtension?: boolean
-        /**
-         *
-         * When url needs to be decoded
-         *
-         * Only works if `alwaysStatic` is set to false
-         */
-        enableDecodeURI?: boolean
-        /**
-         * Nodejs resolve function
-         */
-        resolve?: (...pathSegments: string[]) => string
-        /**
-         * Set headers
-         */
-        headers?: Record<string, string> | undefined
-        /**
-         * @default false
-         *
-         * If set to true, browser caching will be disabled
-         */
-        noCache?: boolean
-        /**
-         * @default public
-         *
-         * directive for Cache-Control header
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#directives
-         */
-        directive?:
-            | 'public'
-            | 'private'
-            | 'must-revalidate'
-            | 'no-cache'
-            | 'no-store'
-            | 'no-transform'
-            | 'proxy-revalidate'
-            | 'immutable'
-        /**
-         * @default 86400
-         *
-         * Specifies the maximum amount of time in seconds, a resource will be considered fresh.
-         * This freshness lifetime is calculated relative to the time of the request.
-         * This setting helps control browser caching behavior.
-         * A `maxAge` of 0 will prevent caching, requiring requests to validate with the server before use.
-         */
-        maxAge?: number | null
-        /**
-         *
-         */
-        /**
-         * @default true
-         *
-         * Enable serving of index.html as default / route
-         */
-        indexHTML?: boolean
-    } = {
-        assets: 'public',
-        prefix: '/public' as Prefix,
-        staticLimit: 1024,
-        alwaysStatic: process.env.NODE_ENV === 'production',
-        ignorePatterns: [],
-        noExtension: false,
-        enableDecodeURI: false,
-        resolve: resolveFn,
-        headers: {},
-        noCache: false,
-        indexHTML: true
+        return new Elysia()
     }
-) => {
-    const files = await listFiles(resolveFn(assets))
-    const isFSSepUnsafe = sep !== URL_PATH_SEP
 
-    if (prefix === URL_PATH_SEP) prefix = '' as Prefix
+    const builtinModule = getBuiltinModule()
+    if (!builtinModule) return new Elysia()
 
-    const shouldIgnore = (file: string) => {
-        if (!ignorePatterns.length) return false
+    const [fs, path] = builtinModule
 
-        return ignorePatterns.find((pattern) => {
-            if (typeof pattern === 'string') return pattern.includes(file)
-            else return pattern.test(file)
-        })
-    }
+    if (prefix === path.sep) prefix = '' as Prefix
+
+    const assetsDir = assets[0] === path.sep ? assets : path.resolve(assets)
+
+    const shouldIgnore = !ignorePatterns.length
+        ? () => false
+        : (file: string) =>
+              ignorePatterns.find((pattern) =>
+                  typeof pattern === 'string'
+                      ? pattern.includes(file)
+                      : pattern.test(file)
+              )
 
     const app = new Elysia({
         name: 'static',
-        seed: {
-            assets,
-            prefix,
-            staticLimit,
-            alwaysStatic,
-            ignorePatterns,
-            noExtension,
-            enableDecodeURI,
-            resolve: resolve.toString(),
-            headers,
-            noCache,
-            maxAge,
-            directive,
-            indexHTML
-        }
+        seed: prefix
     })
 
-    const assetsDir = assets[0] === sep ? assets : resolve(assets)
+    if (alwaysStatic) {
+        const files = await listFiles(path.resolve(assets))
 
-    if (
-        alwaysStatic ||
-        (process.env.ENV === 'production' && files.length <= staticLimit)
-    )
-        for (const absolutePath of files) {
-            if (!absolutePath || shouldIgnore(absolutePath)) continue
-            let relativePath = absolutePath.replace(assetsDir, '')
+        if (files.length <= staticLimit)
+            for (const absolutePath of files) {
+                if (!absolutePath || shouldIgnore(absolutePath)) continue
 
-            if (noExtension) {
-                const temp = relativePath.split('.')
-                temp.splice(-1)
+                let relativePath = absolutePath.replace(assetsDir, '')
+                let pathName = path.join(prefix, relativePath)
 
-                relativePath = temp.join('.')
-            }
+                if (isBun && absolutePath.endsWith('.html')) {
+                    const htmlBundle = await import(absolutePath)
 
-            const file = Bun.file(absolutePath)
-            const etag = await generateETag(file)
+                    app.get(pathName, htmlBundle.default)
+                    if (indexHTML && pathName.endsWith('/index.html'))
+                        app.get(
+                            pathName.replace('/index.html', ''),
+                            htmlBundle.default
+                        )
 
-            const pathName = isFSSepUnsafe
-                ? prefix + relativePath.split(sep).join(URL_PATH_SEP)
-                : join(prefix, relativePath)
+                    continue
+                }
 
-            app.get(
-                pathName,
-                noCache
-                    ? new Response(file, {
-                          headers
-                      })
-                    : async ({ headers: reqHeaders }) => {
-                          if (await isCached(reqHeaders, etag, absolutePath)) {
-                              return new Response(null, {
-                                  status: 304,
-                                  headers
-                              })
-                          }
+                if (!extension)
+                    pathName = pathName.slice(0, pathName.lastIndexOf('.'))
 
-                          headers['Etag'] = etag
-                          headers['Cache-Control'] = directive
-                          if (maxAge !== null)
-                              headers['Cache-Control'] += `, max-age=${maxAge}`
+                const file: Awaited<ReturnType<typeof getFile>> = isBun
+                    ? getFile(absolutePath)
+                    : ((await getFile(absolutePath)) as any)
 
-                          return new Response(file, {
-                              headers
-                          })
-                      }
-            )
+                if (!file) {
+                    if (!silent)
+                        console.warn(
+                            `[@elysiajs/static] Failed to load file: ${absolutePath}`
+                        )
 
-            if (indexHTML && pathName.endsWith('/index.html'))
-                app.get(
-                    pathName.replace('/index.html', ''),
-                    noCache
-                        ? new Response(file, {
-                              headers
-                          })
-                        : async ({ headers: reqHeaders }) => {
-                              if (await isCached(reqHeaders, etag, pathName)) {
-                                  return new Response(null, {
-                                      status: 304,
-                                      headers
-                                  })
-                              }
+                    return new Elysia()
+                }
 
-                              headers['Etag'] = etag
-                              headers['Cache-Control'] = directive
-                              if (maxAge !== null)
-                                  headers['Cache-Control'] +=
-                                      `, max-age=${maxAge}`
+                const etag = await generateETag(file)
 
-                              return new Response(file, {
-                                  headers
-                              })
-                          }
-                )
-        }
-    else {
-        if (
-            !app.router.history.find(
-                ({ method, path }) => path === `${prefix}/*` && method === 'GET'
-            )
-        )
-            app.onError(() => {}).get(
-                `${prefix}/*`,
-                async ({ params, headers: reqHeaders }) => {
-                    let path = enableDecodeURI
-                        ? // @ts-ignore
-                          decodeURI(`${assets}/${decodeURI(params['*'])}`)
-                        : // @ts-ignore
-                          `${assets}/${params['*']}`
-                    // Handle varying filepath separators
-                    if (isFSSepUnsafe) {
-                        path = path.replace(URL_PATH_SEP, sep)
-                    }
+                function handleCache({
+                    headers: requestHeaders
+                }: {
+                    headers: Record<string, string>
+                }) {
+                    const headers: Record<string, string> = initialHeaders
+                        ? Object.assign({}, initialHeaders)
+                        : Object.create(null)
 
-                    // Note that path must match the system separator
-                    if (shouldIgnore(path)) throw new NotFoundError()
+                    if (etag) {
+                        let cached = isCached(
+                            requestHeaders as any,
+                            etag,
+                            absolutePath
+                        )
 
-                    try {
-                        let fileStat = statCache.get<Stats>(path)
-                        if (!fileStat) {
-                            try {
-                                fileStat = await stat(path)
-                                statCache.set(path, fileStat)
-                            } catch {
-                                throw new NotFoundError()
-                            }
-                        }
-
-                        if (!indexHTML && status.isDirectory())
-                            throw new NotFoundError()
-
-                        let file =
-                            fileCache.get<ReturnType<(typeof Bun)['file']>>(
-                                path
-                            )
-
-                        if (!file) {
-                            if (fileStat.isDirectory()) {
-                                let hasCache = false
-
-                                if (
-                                    indexHTML &&
-                                    (hasCache =
-                                        htmlCache.get<boolean>(
-                                            `${path}${sep}index.html`
-                                        ) ??
-                                        (await fileExists(
-                                            `${path}${sep}index.html`
-                                        )))
-                                ) {
-                                    if (hasCache === undefined)
-                                        htmlCache.set(
-                                            `${path}${sep}index.html`,
-                                            true
-                                        )
-
-                                    file = Bun.file(`${path}${sep}index.html`)
-                                } else {
-                                    if (indexHTML && hasCache === undefined)
-                                        htmlCache.set(
-                                            `${path}${sep}index.html`,
-                                            false
-                                        )
-
-                                    throw new NotFoundError()
-                                }
-                            }
-
-                            file ??= Bun.file(path)
-                            fileCache.set(path, file)
-                        }
-
-                        if (noCache)
-                            return new Response(file, {
-                                headers
-                            })
-
-                        const etag = await generateETag(file)
-                        if (await isCached(reqHeaders, etag, path))
+                        if (cached === true)
                             return new Response(null, {
                                 status: 304,
                                 headers
                             })
+                        else if (cached !== false)
+                            return cached.then((cached) => {
+                                if (cached)
+                                    return new Response(null, {
+                                        status: 304,
+                                        headers
+                                    })
 
-                        headers['Etag'] = etag
-                        headers['Cache-Control'] = directive
-                        if (maxAge !== null)
-                            headers['Cache-Control'] += `, max-age=${maxAge}`
+                                if (etag) headers['Etag'] = etag
+                                headers['Cache-Control'] = maxAge
+                                    ? `${directive}, max-age=${maxAge}`
+                                    : directive
+
+                                return new Response(file, headers)
+                            })
+                    }
+
+                    if (etag) headers['Etag'] = etag
+                    headers['Cache-Control'] = maxAge
+                        ? `${directive}, max-age=${maxAge}`
+                        : directive
+
+                    return new Response(file, { headers })
+                }
+
+                app.get(
+                    pathName,
+                    useETag
+                        ? (handleCache as any)
+                        : new Response(file, {
+                              headers: initialHeaders
+                          })
+                )
+
+                if (indexHTML && pathName.endsWith('/index.html'))
+                    app.get(
+                        pathName.replace('/index.html', ''),
+                        useETag
+                            ? (handleCache as any)
+                            : new Response(file, {
+                                  headers: initialHeaders
+                              })
+                    )
+            }
+
+        return app
+    }
+
+    if (
+        // @ts-ignore private property
+        !(`GET_${prefix}/*` in app.routeTree)
+    ) {
+        if (isBun) {
+            const htmls = await listHTMLFiles(path.resolve(assets))
+
+            for (const absolutePath of htmls) {
+                if (!absolutePath || shouldIgnore(absolutePath)) continue
+
+                let relativePath = absolutePath.replace(assetsDir, '')
+                const pathName = path.join(prefix, relativePath)
+
+                const htmlBundle = await import(absolutePath)
+
+                app.get(pathName, htmlBundle.default)
+                if (indexHTML && pathName.endsWith('/index.html'))
+                    app.get(
+                        pathName.replace('/index.html', ''),
+                        htmlBundle.default
+                    )
+            }
+        }
+
+        app.onError(() => {}).get(
+            `${prefix}/*`,
+            async ({ params, headers: requestHeaders }) => {
+                const headers = Object.assign({}, initialHeaders)
+
+                const pathName = path.join(
+                    assets,
+                    decodeURI
+                        ? (fastDecodeURI(params['*']) ?? params['*'])
+                        : params['*']
+                )
+
+                if (shouldIgnore(pathName)) throw new NotFoundError()
+
+                try {
+                    let fileStat = statCache.get(pathName)
+                    if (!fileStat)
+                        try {
+                            fileStat = await fs.stat(pathName)
+                            statCache.set(pathName, fileStat)
+                        } catch {
+                            throw new NotFoundError()
+                        }
+
+                    if (!indexHTML && fileStat.isDirectory())
+                        throw new NotFoundError()
+
+                    let file = fileCache.get(pathName)
+                    if (!file) {
+                        if (!isBun && indexHTML) {
+                            const htmlPath = path.join(pathName, 'index.html')
+                            file = fileCache.get(htmlPath)
+
+                            if (!file && (await fileExists(htmlPath)))
+                                file = await getFile(htmlPath)
+                        }
+
+                        if (
+                            !file &&
+                            !fileStat.isDirectory() &&
+                            (await fileExists(pathName))
+                        )
+                            file = await getFile(pathName)
+                        else throw new NotFoundError()
+                    }
+
+                    if (!useETag) {
+                        if (isNotEmpty(headers)) return new Response(file)
 
                         return new Response(file, {
                             headers
                         })
-                    } catch (error) {
-                        if (error instanceof NotFoundError) throw error
-                        console.error(`Error in @elysiajs/static`, error)
-                        throw new NotFoundError()
                     }
+
+                    const etag = await generateETag(file)
+                    if (
+                        etag &&
+                        (await isCached(requestHeaders, etag, pathName))
+                    )
+                        return new Response(null, {
+                            status: 304
+                        })
+
+                    if (etag) headers['Etag'] = etag
+                    headers['Cache-Control'] = maxAge
+                        ? `${directive}, max-age=${maxAge}`
+                        : directive
+
+                    return new Response(file, {
+                        headers
+                    })
+                } catch (error) {
+                    if (error instanceof NotFoundError) throw error
+                    if (!silent) console.error(`[@elysiajs/static]`, error)
+
+                    throw new NotFoundError()
                 }
-            )
+            }
+        )
     }
 
     return app

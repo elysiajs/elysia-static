@@ -1,8 +1,26 @@
+# 1.4.1 - 13 Oct 2025
+Improvement:
+- [#34](https://github.com/elysiajs/elysia-static/pull/34) log errors, make it easier to debug errors inside @elysiajs/static
+- [#44](https://github.com/elysiajs/elysia-static/pull/44) fixed edge case when working dir is root
+- use process.getBuiltinModules instead of import
+- refactor codebase to be more readable
+- rename `noCache` to `cache`
+- use `Bun.Glob` if Bun is detected
+- conditional run `listFiles` only when necessary
+- reduce seed to `prefix` parameter
+- cache etag generation
+
+Change:
+- remove node-cache dependency
+- remove handle safe sep for windows as Node already handle it
+
+Breaking Change:
+- rename `enableDecodeURI` to `decodeURI`
+- remove `resolve` options, use default path.resolve instead
 
 # 1.3.0-exp.0 - 23 Apr 2025
 Change:
 - Add support for Elysia 1.3
-
 
 # 1.2.0-rc.0 - 23 Dec 2024
 Change:

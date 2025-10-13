@@ -1,21 +1,19 @@
 import { Elysia } from 'elysia'
 import { staticPlugin } from '../src'
+import { req } from '../test/utils'
 
-const a = async () => {
-    return new Elysia()
-}
+const app = new Elysia().use(
+    staticPlugin({
+        alwaysStatic: true,
+        extension: false
+    })
+)
 
-const app = new Elysia()
-    .use(a())
-    .use(
-        staticPlugin({
-            ignorePatterns: [/takodachi.png$/]
-        })
-    )
-    .use(
-        staticPlugin({
-            assets: 'public-aliased',
-            ignorePatterns: [/takodachi.png$/]
-        })
-    )
-    .listen(300)
+await app.modules
+
+const res = await app.handle(req('/public/takodachi'))
+
+console.log(res.headers.toJSON())
+
+// expect(res.headers.get('Etag')).toBe('ZGe9eXgawZBlMox8sZg82Q==')
+// expect(res.status).toBe(200)
