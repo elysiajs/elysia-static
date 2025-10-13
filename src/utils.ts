@@ -77,9 +77,7 @@ export function fileExists(path: string) {
     )
 }
 
-type RemoveReason = 'expired' | 'evicted'
-
-class LRUCache<K, V> {
+export class LRUCache<K, V> {
     private map = new Map<K, [V, number]>()
     private interval: number | undefined
 
@@ -115,7 +113,7 @@ class LRUCache<K, V> {
             if (oldestKey !== undefined) this.delete(oldestKey)
         }
 
-        this.map.set(key, [value, Date.now()])
+        this.map.set(key, [value, Date.now() + this.ttl * 1000])
     }
 
     delete(key: K): void {
@@ -137,12 +135,6 @@ class LRUCache<K, V> {
     }
 }
 
-type File = NonNullable<Awaited<ReturnType<typeof getFile>>>
-
-const etagCache = new LRUCache<File, string>()
-export const statCache = new LRUCache<string, Stats>()
-export const fileCache = new LRUCache<string, File>()
-
 export function isCached(
     headers: Record<string, string | undefined>,
     etag: string,
@@ -153,7 +145,7 @@ export function isCached(
     // https://tools.ietf.org/html/rfc2616#section-14.9.4
     if (
         headers['cache-control'] &&
-        headers['cache-control'].indexOf('no-cache') !== -1
+        /no-cache|no-store/.test(headers['cache-control'])
     )
         return false
 
@@ -207,18 +199,10 @@ export function getFile(path: string) {
 }
 
 export async function generateETag(file: BunFile | Buffer<ArrayBufferLike>) {
-    const cached = etagCache.get(file)
-    if (cached) return cached
-
-    if (isBun) {
-        const hash = new Bun.CryptoHasher('md5')
+    if (isBun)
+        return new Bun.CryptoHasher('md5')
             .update(await (file as BunFile).arrayBuffer())
             .digest('base64')
-
-        etagCache.set(file, hash)
-
-        return hash
-    }
 
     if (!crypto) Crypto = process.getBuiltinModule('crypto')
     if (!crypto)
@@ -226,13 +210,9 @@ export async function generateETag(file: BunFile | Buffer<ArrayBufferLike>) {
             '[@elysiajs/static] crypto is required to generate etag.'
         )
 
-    const hash = Crypto.createHash('md5')
+    return Crypto.createHash('md5')
         .update(file as Buffer)
         .digest('base64')
-
-    etagCache.set(file, hash)
-
-    return hash
 }
 
 export const isNotEmpty = (obj?: Object) => {

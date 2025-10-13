@@ -5,15 +5,14 @@ import { req } from '../test/utils'
 const app = new Elysia().use(
     staticPlugin({
         alwaysStatic: true,
-        extension: false
+        extension: false,
+        headers: {
+            ['x-powered-by']: 'Takodachi'
+        }
     })
 )
 
 await app.modules
 
 const res = await app.handle(req('/public/takodachi'))
-
-console.log(res.headers.toJSON())
-
-// expect(res.headers.get('Etag')).toBe('ZGe9eXgawZBlMox8sZg82Q==')
-// expect(res.status).toBe(200)
+console.log(res.headers.get('x-powered-by'))

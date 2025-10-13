@@ -1,5 +1,11 @@
+# 1.4.2 - 13 Oct 2025
+Improvement:
+- better caching mechanism
+- scope cache to each instance
+
 # 1.4.1 - 13 Oct 2025
 Improvement:
+- enable Bun full stack support
 -  general performance improvement
 - [#34](https://github.com/elysiajs/elysia-static/pull/34) log errors, make it easier to debug errors inside @elysiajs/static
 - [#44](https://github.com/elysiajs/elysia-static/pull/44) fixed edge case when working dir is root

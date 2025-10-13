@@ -174,7 +174,7 @@ describe('Static Plugin', () => {
                 alwaysStatic: true,
                 extension: false,
                 headers: {
-                    ['x-powered-by']: 'Takodachi'
+                    'x-powered-by': 'Takodachi'
                 }
             })
         )

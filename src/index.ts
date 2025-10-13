@@ -1,13 +1,14 @@
 import { Elysia, NotFoundError } from 'elysia'
 
+import type { Stats } from 'fs'
+
 import fastDecodeURI from 'fast-decode-uri-component'
 
 import {
-    fileCache,
+    LRUCache,
     fileExists,
     getBuiltinModule,
     listFiles,
-    statCache,
     generateETag,
     isCached,
     getFile,
@@ -38,7 +39,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     ) {
         if (!silent)
             console.warn(
-                '@elysiajs/static require process.getBuiltinModule to be available.'
+                '[@elysiajs/static] require process.getBuiltinModule. Static plugin is disabled'
             )
 
         return new Elysia()
@@ -49,10 +50,11 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
     const [fs, path] = builtinModule
 
+    const statCache = new LRUCache<string, Stats>()
+    const fileCache = new LRUCache<string, Response>()
+
     if (prefix === path.sep) prefix = '' as Prefix
-
-    const assetsDir = assets[0] === path.sep ? assets : path.resolve(assets)
-
+    const assetsDir = path.resolve(assets)
     const shouldIgnore = !ignorePatterns.length
         ? () => false
         : (file: string) =>
@@ -75,6 +77,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (!absolutePath || shouldIgnore(absolutePath)) continue
 
                 let relativePath = absolutePath.replace(assetsDir, '')
+                if (decodeURI)
+                    relativePath = fastDecodeURI(relativePath) ?? relativePath
+
                 let pathName = path.join(prefix, relativePath)
 
                 if (isBun && absolutePath.endsWith('.html')) {
@@ -113,10 +118,6 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 }: {
                     headers: Record<string, string>
                 }) {
-                    const headers: Record<string, string> = initialHeaders
-                        ? Object.assign({}, initialHeaders)
-                        : Object.create(null)
-
                     if (etag) {
                         let cached = isCached(
                             requestHeaders as any,
@@ -127,40 +128,74 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                         if (cached === true)
                             return new Response(null, {
                                 status: 304,
-                                headers
+                                headers: isNotEmpty(initialHeaders)
+                                    ? initialHeaders
+                                    : undefined
                             })
-                        else if (cached !== false)
+                        else if (cached !== false) {
+                            const cache = fileCache.get(pathName)
+                            if (cache) return cache.clone()
+
                             return cached.then((cached) => {
                                 if (cached)
                                     return new Response(null, {
                                         status: 304,
-                                        headers
+                                        headers: initialHeaders
+                                            ? initialHeaders
+                                            : undefined
                                     })
 
-                                if (etag) headers['Etag'] = etag
-                                headers['Cache-Control'] = maxAge
-                                    ? `${directive}, max-age=${maxAge}`
-                                    : directive
+                                const response = new Response(file, {
+                                    headers: Object.assign(
+                                        {
+                                            'Cache-Control': maxAge
+                                                ? `${directive}, max-age=${maxAge}`
+                                                : directive
+                                        },
+                                        initialHeaders,
+                                        etag ? { Etag: etag } : {}
+                                    )
+                                })
+                                fileCache.set(prefix, response)
 
-                                return new Response(file, headers)
+                                return response.clone()
                             })
+                        }
                     }
 
-                    if (etag) headers['Etag'] = etag
-                    headers['Cache-Control'] = maxAge
-                        ? `${directive}, max-age=${maxAge}`
-                        : directive
+                    const cache = fileCache.get(pathName)
+                    if (cache)
+                        return cache.clone()
 
-                    return new Response(file, { headers })
+                    const response = new Response(file, {
+                        headers: Object.assign(
+                            {
+                                'Cache-Control': maxAge
+                                    ? `${directive}, max-age=${maxAge}`
+                                    : directive
+                            },
+                            initialHeaders,
+                            etag ? { Etag: etag } : {}
+                        )
+                    })
+
+                    fileCache.set(pathName, response)
+
+                    return response.clone()
                 }
 
                 app.get(
                     pathName,
                     useETag
                         ? (handleCache as any)
-                        : new Response(file, {
-                              headers: initialHeaders
-                          })
+                        : new Response(
+                              file,
+                              isNotEmpty(initialHeaders)
+                                  ? {
+                                        headers: initialHeaders
+                                    }
+                                  : undefined
+                          )
                 )
 
                 if (indexHTML && pathName.endsWith('/index.html'))
@@ -168,9 +203,14 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                         pathName.replace('/index.html', ''),
                         useETag
                             ? (handleCache as any)
-                            : new Response(file, {
-                                  headers: initialHeaders
-                              })
+                            : new Response(
+                                  file,
+                                  isNotEmpty(initialHeaders)
+                                      ? {
+                                            headers: initialHeaders
+                                        }
+                                      : undefined
+                              )
                     )
             }
 
@@ -204,8 +244,6 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         app.onError(() => {}).get(
             `${prefix}/*`,
             async ({ params, headers: requestHeaders }) => {
-                const headers = Object.assign({}, initialHeaders)
-
                 const pathName = path.join(
                     assets,
                     decodeURI
@@ -214,6 +252,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 )
 
                 if (shouldIgnore(pathName)) throw new NotFoundError()
+
+                const cache = fileCache.get(pathName)
+                if (cache) return cache.clone()
 
                 try {
                     let fileStat = statCache.get(pathName)
@@ -228,32 +269,35 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     if (!indexHTML && fileStat.isDirectory())
                         throw new NotFoundError()
 
-                    let file = fileCache.get(pathName)
-                    if (!file) {
-                        if (!isBun && indexHTML) {
-                            const htmlPath = path.join(pathName, 'index.html')
-                            file = fileCache.get(htmlPath)
+                    // @ts-ignore
+                    let file:
+                        | NonNullable<Awaited<ReturnType<typeof getFile>>>
+                        | undefined
 
-                            if (!file && (await fileExists(htmlPath)))
-                                file = await getFile(htmlPath)
-                        }
+                    if (!isBun && indexHTML) {
+                        const htmlPath = path.join(pathName, 'index.html')
+                        const cache = fileCache.get(htmlPath)
+                        if (cache) return cache.clone()
 
-                        if (
-                            !file &&
-                            !fileStat.isDirectory() &&
-                            (await fileExists(pathName))
+                        if (await fileExists(htmlPath))
+                            file = await getFile(htmlPath)
+                    }
+
+                    if (
+                        !file &&
+                        !fileStat.isDirectory() &&
+                        (await fileExists(pathName))
+                    )
+                        file = await getFile(pathName)
+                    else throw new NotFoundError()
+
+                    if (!useETag)
+                        return new Response(
+                            file,
+                            isNotEmpty(initialHeaders)
+                                ? { headers: initialHeaders }
+                                : undefined
                         )
-                            file = await getFile(pathName)
-                        else throw new NotFoundError()
-                    }
-
-                    if (!useETag) {
-                        if (isNotEmpty(headers)) return new Response(file)
-
-                        return new Response(file, {
-                            headers
-                        })
-                    }
 
                     const etag = await generateETag(file)
                     if (
@@ -264,14 +308,21 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                             status: 304
                         })
 
-                    if (etag) headers['Etag'] = etag
-                    headers['Cache-Control'] = maxAge
-                        ? `${directive}, max-age=${maxAge}`
-                        : directive
-
-                    return new Response(file, {
-                        headers
+                    const response = new Response(file, {
+                        headers: Object.assign(
+                            {
+                                'Cache-Control': maxAge
+                                    ? `${directive}, max-age=${maxAge}`
+                                    : directive
+                            },
+                            initialHeaders,
+                            etag ? { Etag: etag } : {}
+                        )
                     })
+
+                    fileCache.set(pathName, response)
+
+                    return response.clone()
                 } catch (error) {
                     if (error instanceof NotFoundError) throw error
                     if (!silent) console.error(`[@elysiajs/static]`, error)
