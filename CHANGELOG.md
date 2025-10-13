@@ -1,3 +1,7 @@
+# 1.4.4 - 14 Oct 2025
+Bug fix:
+- fix cjs main import
+
 # 1.4.3 - 13 Oct 2025
 Improvement:
 - adjust build script
