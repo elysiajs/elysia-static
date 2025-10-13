@@ -1,45 +1,31 @@
 import { $ } from 'bun'
 import { build, type Options } from 'tsup'
+import { fixImportsPlugin } from 'esbuild-fix-imports-plugin'
 
 await $`rm -rf dist`
 
 const external = ['fast-decode-uri-component']
 
-const tsupConfig: Options = {
-    entry: ['src/**/*.ts'],
-    minifySyntax: true,
-	minifyWhitespace: false,
-	minifyIdentifiers: false,
-    splitting: false,
-    sourcemap: false,
-    clean: true,
-    bundle: false,
-    external
-} satisfies Options
-
 await Promise.all([
     // ? tsup esm
     build({
+        entry: ['src/**/*.ts'],
         outDir: 'dist',
-        format: 'esm',
+        format: ['esm', 'cjs'],
         target: 'node20',
+        minifySyntax: true,
+        minifyWhitespace: false,
+        minifyIdentifiers: false,
+        splitting: false,
+        sourcemap: false,
         cjsInterop: false,
+        clean: true,
+        bundle: false,
         external,
-        ...tsupConfig
-    }),
-    // ? tsup cjs
-    build({
-        outDir: 'dist/cjs',
-        format: 'cjs',
-        target: 'node20',
-        external,
-        // dts: true,
-        ...tsupConfig
+        esbuildPlugins: [fixImportsPlugin()]
     })
 ])
 
 await $`tsc --project tsconfig.dts.json`
-
-await Promise.all([$`cp dist/*.d.ts dist/cjs`])
 
 process.exit()
