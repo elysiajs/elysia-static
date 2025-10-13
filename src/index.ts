@@ -164,8 +164,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     }
 
                     const cache = fileCache.get(pathName)
-                    if (cache)
-                        return cache.clone()
+                    if (cache) return cache.clone()
 
                     const response = new Response(file, {
                         headers: Object.assign(
