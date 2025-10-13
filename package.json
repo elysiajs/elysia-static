@@ -1,6 +1,6 @@
 {
     "name": "@elysiajs/static",
-    "version": "1.4.2",
+    "version": "1.4.3",
     "license": "MIT",
     "scripts": {
         "dev": "bun run --watch example/index.ts",

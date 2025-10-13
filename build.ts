@@ -3,12 +3,18 @@ import { build, type Options } from 'tsup'
 
 await $`rm -rf dist`
 
+const external = ['fast-decode-uri-component']
+
 const tsupConfig: Options = {
     entry: ['src/**/*.ts'],
+    minifySyntax: true,
+	minifyWhitespace: false,
+	minifyIdentifiers: false,
     splitting: false,
     sourcemap: false,
     clean: true,
-    bundle: true
+    bundle: false,
+    external
 } satisfies Options
 
 await Promise.all([
@@ -18,6 +24,7 @@ await Promise.all([
         format: 'esm',
         target: 'node20',
         cjsInterop: false,
+        external,
         ...tsupConfig
     }),
     // ? tsup cjs
@@ -25,6 +32,7 @@ await Promise.all([
         outDir: 'dist/cjs',
         format: 'cjs',
         target: 'node20',
+        external,
         // dts: true,
         ...tsupConfig
     })

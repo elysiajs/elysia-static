@@ -1,5 +1,6 @@
 # 1.4.3 - 13 Oct 2025
-Bug fix:
+Improvement:
+- adjust build script
 - remove stat cache
 
 # 1.4.2 - 13 Oct 2025
