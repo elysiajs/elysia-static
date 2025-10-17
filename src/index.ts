@@ -239,7 +239,11 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         }
 
         const serveStaticFile = async (pathName: string, requestHeaders?: Record<string, string | undefined>) => {
-            if (shouldIgnore(pathName)) return null
+            // Normalize for ignore matching
+            const rel = pathName.startsWith(assetsDir)
+                ? pathName.slice(assetsDir.length)
+                : pathName
+            if (shouldIgnore(rel)) return null
 
             const cache = fileCache.get(pathName)
             if (cache) return cache.clone()
@@ -250,14 +254,17 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             if (!indexHTML && fileStat.isDirectory()) return null
 
             let file: NonNullable<Awaited<ReturnType<typeof getFile>>> | undefined
+            let targetPath = pathName
 
             if (!isBun && indexHTML) {
                 const htmlPath = path.join(pathName, 'index.html')
                 const cache = fileCache.get(htmlPath)
                 if (cache) return cache.clone()
 
-                if (await fileExists(htmlPath))
+                if (await fileExists(htmlPath)) {
                     file = await getFile(htmlPath)
+                    targetPath = htmlPath
+                }
             }
 
             if (!file && !fileStat.isDirectory() && (await fileExists(pathName)))
@@ -274,8 +281,11 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 )
 
             const etag = await generateETag(file)
-            if (requestHeaders && etag && (await isCached(requestHeaders, etag, pathName)))
-                return new Response(null, { status: 304 })
+            if (requestHeaders && etag && (await isCached(requestHeaders, etag, targetPath)))
+                return new Response(null, {
+                    status: 304,
+                    headers: isNotEmpty(initialHeaders) ? initialHeaders : undefined
+                })
 
             const response = new Response(file, {
                 headers: Object.assign(
