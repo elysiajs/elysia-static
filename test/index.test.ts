@@ -496,4 +496,47 @@ describe('Static Plugin', () => {
         const res = await app.handle(req('/api/auth/get-session'))
         expect(res.status).toBe(200)
     })
+
+    it('should prevent directory traversal attacks', async () => {
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const traversalPaths = [
+            '/public/../package.json',
+            '/public/../../package.json',
+            '/public/../../../etc/passwd',
+            '/public/%2e%2e/package.json',
+            '/public/nested/../../package.json'
+        ]
+
+        for (const path of traversalPaths) {
+            const res = await app.handle(req(path))
+            expect(res.status).toBe(404)
+        }
+    })
+
+    it('should prevent directory traversal attacks when enableFallback is true', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                prefix: '/',
+                enableFallback: true
+            })
+        )
+
+        await app.modules
+
+        const traversalPaths = [
+            '/../package.json',
+            '/../../package.json',
+            '/../../../etc/passwd',
+            '/%2e%2e/package.json',
+            '/nested/../../package.json'
+        ]
+
+        for (const path of traversalPaths) {
+            const res = await app.handle(req(path))
+            expect(res.status).toBe(404)
+        }
+    })
 })

@@ -311,16 +311,25 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     }
                 }
 
-                const pathName = path.join(
-                    assets,
-                    decodeURI
-                        ? (fastDecodeURI(pathname) ?? pathname)
-                        : pathname
+                const rawPath = decodeURI
+                    ? (fastDecodeURI(pathname) ?? pathname)
+                    : pathname
+                const resolvedPath = path.resolve(
+                    assetsDir,
+                    rawPath.replace(/^\//, '')
                 )
+                // Block path traversal: must stay under assetsDir
+                if (
+                    resolvedPath !== assetsDir &&
+                    !resolvedPath.startsWith(assetsDir + path.sep)
+                )
+                    return
+
+                if (shouldIgnore(resolvedPath.replace(assetsDir, ''))) return
 
                 try {
                     const headers = Object.fromEntries(request.headers)
-                    return await serveStaticFile(pathName, headers)
+                    return await serveStaticFile(resolvedPath, headers)
                 } catch {
                     return
                 }
@@ -329,15 +338,27 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             app.onError(() => {}).get(
                 `${prefix}/*`,
                 async ({ params, headers: requestHeaders }) => {
-                    const pathName = path.join(
-                        assets,
-                        decodeURI
-                            ? (fastDecodeURI(params['*']) ?? params['*'])
-                            : params['*']
+                    const rawPath = decodeURI
+                        ? (fastDecodeURI(params['*']) ?? params['*'])
+                        : params['*']
+                    const resolvedPath = path.resolve(
+                        assetsDir,
+                        rawPath.replace(/^\//, '')
                     )
+                    if (
+                        resolvedPath !== assetsDir &&
+                        !resolvedPath.startsWith(assetsDir + path.sep)
+                    )
+                        throw new NotFoundError()
+
+                    if (shouldIgnore(resolvedPath.replace(assetsDir, '')))
+                        throw new NotFoundError()
 
                     try {
-                        const result = await serveStaticFile(pathName, requestHeaders)
+                        const result = await serveStaticFile(
+                            resolvedPath,
+                            requestHeaders
+                        )
                         if (result) return result
                         throw new NotFoundError()
                     } catch (error) {
