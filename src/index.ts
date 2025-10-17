@@ -297,6 +297,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             app.onError({ as: 'global' }, async ({ code, request }) => {
                 if (code !== 'NOT_FOUND') return
 
+                // Only serve static files for GET/HEAD
+                if (request.method !== 'GET' && request.method !== 'HEAD') return
+
                 const url = new URL(request.url)
                 let pathname = url.pathname
 
@@ -316,7 +319,8 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 )
 
                 try {
-                    return await serveStaticFile(pathName)
+                    const headers = Object.fromEntries(request.headers)
+                    return await serveStaticFile(pathName, headers)
                 } catch {
                     return
                 }
