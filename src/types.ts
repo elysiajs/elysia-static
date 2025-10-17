@@ -116,4 +116,15 @@ export interface StaticOptions<Prefix extends string> {
 	  * If set to true, suppresses all logs and warnings from the static plugin
       */
       silent?: boolean
+
+     /**
+      * enableFallback
+      *
+      * @default false
+      *
+      * If set to true, when a static file is not found, the request will fall through
+      * to the next route handler instead of returning a 404 error.
+      * This allows other routes to handle the request.
+      */
+      enableFallback?: boolean
 }

@@ -1,7 +1,5 @@
 import { Elysia, NotFoundError } from 'elysia'
 
-import type { Stats } from 'fs'
-
 import fastDecodeURI from 'fast-decode-uri-component'
 
 import {
@@ -31,7 +29,8 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     extension = true,
     indexHTML = true,
     decodeURI,
-    silent
+    silent,
+    enableFallback = false
 }: StaticOptions<Prefix> = {}): Promise<Elysia> {
     if (
         typeof process === 'undefined' ||
@@ -239,90 +238,112 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             }
         }
 
-        app.onError(() => {}).get(
-            `${prefix}/*`,
-            async ({ params, headers: requestHeaders }) => {
+        const serveStaticFile = async (pathName: string, requestHeaders?: Record<string, string | undefined>) => {
+            if (shouldIgnore(pathName)) return null
+
+            const cache = fileCache.get(pathName)
+            if (cache) return cache.clone()
+
+            const fileStat = await fs.stat(pathName).catch(() => null)
+            if (!fileStat) return null
+
+            if (!indexHTML && fileStat.isDirectory()) return null
+
+            let file: NonNullable<Awaited<ReturnType<typeof getFile>>> | undefined
+
+            if (!isBun && indexHTML) {
+                const htmlPath = path.join(pathName, 'index.html')
+                const cache = fileCache.get(htmlPath)
+                if (cache) return cache.clone()
+
+                if (await fileExists(htmlPath))
+                    file = await getFile(htmlPath)
+            }
+
+            if (!file && !fileStat.isDirectory() && (await fileExists(pathName)))
+                file = await getFile(pathName)
+
+            if (!file) return null
+
+            if (!useETag)
+                return new Response(
+                    file,
+                    isNotEmpty(initialHeaders)
+                        ? { headers: initialHeaders }
+                        : undefined
+                )
+
+            const etag = await generateETag(file)
+            if (requestHeaders && etag && (await isCached(requestHeaders, etag, pathName)))
+                return new Response(null, { status: 304 })
+
+            const response = new Response(file, {
+                headers: Object.assign(
+                    {
+                        'Cache-Control': maxAge
+                            ? `${directive}, max-age=${maxAge}`
+                            : directive
+                    },
+                    initialHeaders,
+                    etag ? { Etag: etag } : {}
+                )
+            })
+
+            fileCache.set(pathName, response)
+            return response.clone()
+        }
+
+        if (enableFallback) {
+            app.onError({ as: 'global' }, async ({ code, request }) => {
+                if (code !== 'NOT_FOUND') return
+
+                const url = new URL(request.url)
+                let pathname = url.pathname
+
+                if (prefix) {
+                    if (pathname.startsWith(prefix)) {
+                        pathname = pathname.slice(prefix.length)
+                    } else {
+                        return
+                    }
+                }
+
                 const pathName = path.join(
                     assets,
                     decodeURI
-                        ? (fastDecodeURI(params['*']) ?? params['*'])
-                        : params['*']
+                        ? (fastDecodeURI(pathname) ?? pathname)
+                        : pathname
                 )
 
-                if (shouldIgnore(pathName)) throw new NotFoundError()
-
-                const cache = fileCache.get(pathName)
-                if (cache) return cache.clone()
-
                 try {
-                    const fileStat = await fs.stat(pathName).catch(() => null)
-                    if (!fileStat) throw new NotFoundError()
-
-                    if (!indexHTML && fileStat.isDirectory())
-                        throw new NotFoundError()
-
-                    // @ts-ignore
-                    let file:
-                        | NonNullable<Awaited<ReturnType<typeof getFile>>>
-                        | undefined
-
-                    if (!isBun && indexHTML) {
-                        const htmlPath = path.join(pathName, 'index.html')
-                        const cache = fileCache.get(htmlPath)
-                        if (cache) return cache.clone()
-
-                        if (await fileExists(htmlPath))
-                            file = await getFile(htmlPath)
-                    }
-
-                    if (
-                        !file &&
-                        !fileStat.isDirectory() &&
-                        (await fileExists(pathName))
-                    )
-                        file = await getFile(pathName)
-                    else throw new NotFoundError()
-
-                    if (!useETag)
-                        return new Response(
-                            file,
-                            isNotEmpty(initialHeaders)
-                                ? { headers: initialHeaders }
-                                : undefined
-                        )
-
-                    const etag = await generateETag(file)
-                    if (
-                        etag &&
-                        (await isCached(requestHeaders, etag, pathName))
-                    )
-                        return new Response(null, {
-                            status: 304
-                        })
-
-                    const response = new Response(file, {
-                        headers: Object.assign(
-                            {
-                                'Cache-Control': maxAge
-                                    ? `${directive}, max-age=${maxAge}`
-                                    : directive
-                            },
-                            initialHeaders,
-                            etag ? { Etag: etag } : {}
-                        )
-                    })
-
-                    fileCache.set(pathName, response)
-
-                    return response.clone()
-                } catch (error) {
-                    if (error instanceof NotFoundError) throw error
-                    if (!silent) console.error(`[@elysiajs/static]`, error)
-
-                    throw new NotFoundError()
+                    return await serveStaticFile(pathName)
+                } catch {
+                    return
                 }
-            }
-        )
+            })
+        } else {
+            app.onError(() => {}).get(
+                `${prefix}/*`,
+                async ({ params, headers: requestHeaders }) => {
+                    const pathName = path.join(
+                        assets,
+                        decodeURI
+                            ? (fastDecodeURI(params['*']) ?? params['*'])
+                            : params['*']
+                    )
+
+                    try {
+                        const result = await serveStaticFile(pathName, requestHeaders)
+                        if (result) return result
+                        throw new NotFoundError()
+                    } catch (error) {
+                        if (error instanceof NotFoundError) throw error
+                        if (!silent) console.error(`[@elysiajs/static]`, error)
+                        throw new NotFoundError()
+                    }
+                }
+            )
+        }
     }
 
     return app
