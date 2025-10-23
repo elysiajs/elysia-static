@@ -83,11 +83,12 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
                 if (isBun && absolutePath.endsWith('.html')) {
                     const htmlBundle = await import(absolutePath)
+                    const normalizedPath = pathName.replace(/\\/g, '/')
 
-                    app.get(pathName, htmlBundle.default)
-                    if (indexHTML && pathName.endsWith('/index.html'))
+                    app.get(normalizedPath, htmlBundle.default)
+                    if (indexHTML && normalizedPath.endsWith('/index.html'))
                         app.get(
-                            pathName.replace('/index.html', ''),
+                            normalizedPath.replace('/index.html', ''),
                             htmlBundle.default
                         )
 
@@ -181,9 +182,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
                     return response.clone()
                 }
-
+                const normalizedPath = pathName.replace(/\\/g, '/')
                 app.get(
-                    pathName,
+                    normalizedPath,
                     useETag
                         ? (handleCache as any)
                         : new Response(
@@ -196,9 +197,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                           )
                 )
 
-                if (indexHTML && pathName.endsWith('/index.html'))
+                if (indexHTML && normalizedPath.endsWith('/index.html'))
                     app.get(
-                        pathName.replace('/index.html', ''),
+                        normalizedPath.replace('/index.html', ''),
                         useETag
                             ? (handleCache as any)
                             : new Response(
@@ -227,13 +228,13 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
                 let relativePath = absolutePath.replace(assetsDir, '')
                 const pathName = path.join(prefix, relativePath)
-
+                const normalizedPath = pathName.replace(/\\/g, '/')
                 const htmlBundle = await import(absolutePath)
 
-                app.get(pathName, htmlBundle.default)
-                if (indexHTML && pathName.endsWith('/index.html'))
+                app.get(normalizedPath, htmlBundle.default)
+                if (indexHTML && normalizedPath.endsWith('/index.html'))
                     app.get(
-                        pathName.replace('/index.html', ''),
+                        normalizedPath.replace('/index.html', ''),
                         htmlBundle.default
                     )
             }
@@ -245,7 +246,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 const pathName = path.join(
                     assets,
                     decodeURI
-                        ? (fastDecodeURI(params['*']) ?? params['*'])
+                        ? fastDecodeURI(params['*']) ?? params['*']
                         : params['*']
                 )
 
