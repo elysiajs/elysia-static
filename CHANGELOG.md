@@ -1,3 +1,7 @@
+# 1.4.5 - 1 Nov 2025
+Bug fix:
+- [#52](https://github.com/elysiajs/elysia-static/pull/52) resolve static paths correctly on Windows
+
 # 1.4.4 - 14 Oct 2025
 Bug fix:
 - fix cjs main import
