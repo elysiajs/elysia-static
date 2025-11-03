@@ -1,3 +1,8 @@
+# 1.4.6 - 3 Nov 2025
+Bug fix:
+- normalize path only when unsafe
+- cache `crypto` package import
+
 # 1.4.5 - 1 Nov 2025
 Bug fix:
 - [#52](https://github.com/elysiajs/elysia-static/pull/52) resolve static paths correctly on Windows

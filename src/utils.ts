@@ -204,8 +204,8 @@ export async function generateETag(file: BunFile | Buffer<ArrayBufferLike>) {
             .update(await (file as BunFile).arrayBuffer())
             .digest('base64')
 
-    if (!crypto) Crypto = process.getBuiltinModule('crypto')
-    if (!crypto)
+    if (!Crypto) Crypto = process.getBuiltinModule('crypto')
+    if (!Crypto)
         return void console.warn(
             '[@elysiajs/static] crypto is required to generate etag.'
         )

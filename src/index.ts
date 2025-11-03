@@ -49,6 +49,11 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     if (!builtinModule) return new Elysia()
 
     const [fs, path] = builtinModule
+    const isUnsafeSep = path.sep !== '/'
+
+    const normalizePath = isUnsafeSep
+        ? (p: string) => p.replace(/\\/g, '/')
+        : (p: string) => p
 
     const fileCache = new LRUCache<string, Response>()
 
@@ -79,16 +84,15 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (decodeURI)
                     relativePath = fastDecodeURI(relativePath) ?? relativePath
 
-                let pathName = path.join(prefix, relativePath)
+                let pathName = normalizePath(path.join(prefix, relativePath))
 
                 if (isBun && absolutePath.endsWith('.html')) {
                     const htmlBundle = await import(absolutePath)
-                    const normalizedPath = pathName.replace(/\\/g, '/')
 
-                    app.get(normalizedPath, htmlBundle.default)
-                    if (indexHTML && normalizedPath.endsWith('/index.html'))
+                    app.get(pathName, htmlBundle.default)
+                    if (indexHTML && pathName.endsWith('/index.html'))
                         app.get(
-                            normalizedPath.replace('/index.html', ''),
+                            pathName.replace('/index.html', ''),
                             htmlBundle.default
                         )
 
@@ -96,7 +100,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 }
 
                 if (!extension)
-                    pathName = pathName.slice(0, pathName.lastIndexOf('.'))
+                    pathName = normalizePath(
+                        pathName.slice(0, pathName.lastIndexOf('.'))
+                    )
 
                 const file: Awaited<ReturnType<typeof getFile>> = isBun
                     ? getFile(absolutePath)
@@ -182,9 +188,8 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
                     return response.clone()
                 }
-                const normalizedPath = pathName.replace(/\\/g, '/')
                 app.get(
-                    normalizedPath,
+                    pathName,
                     useETag
                         ? (handleCache as any)
                         : new Response(
@@ -197,9 +202,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                           )
                 )
 
-                if (indexHTML && normalizedPath.endsWith('/index.html'))
+                if (indexHTML && pathName.endsWith('/index.html'))
                     app.get(
-                        normalizedPath.replace('/index.html', ''),
+                        pathName.replace('/index.html', ''),
                         useETag
                             ? (handleCache as any)
                             : new Response(
@@ -227,14 +232,13 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (!absolutePath || shouldIgnore(absolutePath)) continue
 
                 let relativePath = absolutePath.replace(assetsDir, '')
-                const pathName = path.join(prefix, relativePath)
-                const normalizedPath = pathName.replace(/\\/g, '/')
+                const pathName = normalizePath(path.join(prefix, relativePath))
                 const htmlBundle = await import(absolutePath)
 
-                app.get(normalizedPath, htmlBundle.default)
-                if (indexHTML && normalizedPath.endsWith('/index.html'))
+                app.get(pathName, htmlBundle.default)
+                if (indexHTML && pathName.endsWith('/index.html'))
                     app.get(
-                        normalizedPath.replace('/index.html', ''),
+                        pathName.replace('/index.html', ''),
                         htmlBundle.default
                     )
             }
@@ -243,11 +247,13 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         app.onError(() => {}).get(
             `${prefix}/*`,
             async ({ params, headers: requestHeaders }) => {
-                const pathName = path.join(
-                    assets,
-                    decodeURI
-                        ? fastDecodeURI(params['*']) ?? params['*']
-                        : params['*']
+                const pathName = normalizePath(
+                    path.join(
+                        assets,
+                        decodeURI
+                            ? (fastDecodeURI(params['*']) ?? params['*'])
+                            : params['*']
+                    )
                 )
 
                 if (shouldIgnore(pathName)) throw new NotFoundError()
