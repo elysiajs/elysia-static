@@ -48,6 +48,11 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     if (!builtinModule) return new Elysia()
 
     const [fs, path] = builtinModule
+    const isUnsafeSep = path.sep !== '/'
+
+    const normalizePath = isUnsafeSep
+        ? (p: string) => p.replace(/\\/g, '/')
+        : (p: string) => p
 
     const fileCache = new LRUCache<string, Response>()
 
@@ -78,7 +83,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (decodeURI)
                     relativePath = fastDecodeURI(relativePath) ?? relativePath
 
-                let pathName = path.join(prefix, relativePath)
+                let pathName = normalizePath(path.join(prefix, relativePath))
 
                 if (isBun && absolutePath.endsWith('.html')) {
                     const htmlBundle = await import(absolutePath)
@@ -94,7 +99,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 }
 
                 if (!extension)
-                    pathName = pathName.slice(0, pathName.lastIndexOf('.'))
+                    pathName = normalizePath(
+                        pathName.slice(0, pathName.lastIndexOf('.'))
+                    )
 
                 const file: Awaited<ReturnType<typeof getFile>> = isBun
                     ? getFile(absolutePath)
@@ -180,7 +187,6 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
                     return response.clone()
                 }
-
                 app.get(
                     pathName,
                     useETag
@@ -225,8 +231,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (!absolutePath || shouldIgnore(absolutePath)) continue
 
                 let relativePath = absolutePath.replace(assetsDir, '')
-                const pathName = path.join(prefix, relativePath)
-
+                const pathName = normalizePath(path.join(prefix, relativePath))
                 const htmlBundle = await import(absolutePath)
 
                 app.get(pathName, htmlBundle.default)
@@ -239,25 +244,25 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         }
 
         const serveStaticFile = async (pathName: string, requestHeaders?: Record<string, string | undefined>) => {
-            // Normalize for ignore matching
-            const rel = pathName.startsWith(assetsDir)
-                ? pathName.slice(assetsDir.length)
-                : pathName
+            const normalizedPath = normalizePath(pathName)
+            const rel = normalizedPath.startsWith(assetsDir)
+                ? normalizedPath.slice(assetsDir.length)
+                : normalizedPath
             if (shouldIgnore(rel)) return null
 
-            const cache = fileCache.get(pathName)
+            const cache = fileCache.get(normalizedPath)
             if (cache) return cache.clone()
 
-            const fileStat = await fs.stat(pathName).catch(() => null)
+            const fileStat = await fs.stat(normalizedPath).catch(() => null)
             if (!fileStat) return null
 
             if (!indexHTML && fileStat.isDirectory()) return null
 
             let file: NonNullable<Awaited<ReturnType<typeof getFile>>> | undefined
-            let targetPath = pathName
+            let targetPath = normalizedPath
 
             if (!isBun && indexHTML) {
-                const htmlPath = path.join(pathName, 'index.html')
+                const htmlPath = path.join(normalizedPath, 'index.html')
                 const cache = fileCache.get(htmlPath)
                 if (cache) return cache.clone()
 
@@ -267,8 +272,8 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 }
             }
 
-            if (!file && !fileStat.isDirectory() && (await fileExists(pathName)))
-                file = await getFile(pathName)
+            if (!file && !fileStat.isDirectory() && (await fileExists(normalizedPath)))
+                file = await getFile(normalizedPath)
 
             if (!file) return null
 
@@ -299,7 +304,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 )
             })
 
-            fileCache.set(pathName, response)
+            fileCache.set(normalizedPath, response)
             return response.clone()
         }
 
