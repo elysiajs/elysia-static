@@ -1,5 +1,4 @@
 import type { BunFile } from 'bun'
-import type { Stats } from 'fs'
 
 let fs: typeof import('fs/promises')
 let path: typeof import('path')
