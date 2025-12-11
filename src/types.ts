@@ -102,6 +102,13 @@ export interface StaticOptions<Prefix extends string> {
     indexHTML?: boolean
 
     /**
+     * @default true
+     *
+     * Enable bun bundle of *.html
+     */
+	bundleHTML?: boolean
+
+    /**
      * decodeURI
      *
      * @default false
