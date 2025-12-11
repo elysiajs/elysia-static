@@ -88,7 +88,17 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 let pathName = normalizePath(path.join(prefix, relativePath))
 
                 if (isBun && absolutePath.endsWith('.html')) {
-                    const htmlFile = bundleHTML ? (await import(absolutePath)).default : getFile(absolutePath)
+                    let htmlFile
+                    try {
+                        htmlFile = bundleHTML ? (await import(absolutePath)).default : getFile(absolutePath)
+                    } catch (error) {
+                        if (!silent)
+                            console.error(
+                                `[@elysiajs/static] Failed to load HTML file: ${absolutePath}`,
+                                error
+                            )
+                        continue
+                    }
 
                     app.get(pathName, htmlFile)
                     if (indexHTML && pathName.endsWith('/index.html'))
@@ -234,7 +244,17 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
                 let relativePath = absolutePath.replace(assetsDir, '')
                 const pathName = normalizePath(path.join(prefix, relativePath))
-                const htmlFile = bundleHTML ? (await import(absolutePath)).default : getFile(absolutePath)
+                let htmlFile
+                try {
+                    htmlFile = bundleHTML ? (await import(absolutePath)).default : getFile(absolutePath)
+                } catch (error) {
+                    if (!silent)
+                        console.error(
+                            `[@elysiajs/static] Failed to load HTML file: ${absolutePath}`,
+                            error
+                        )
+                    continue
+                }
 
                 app.get(pathName, htmlFile)
                 if (indexHTML && pathName.endsWith('/index.html'))
