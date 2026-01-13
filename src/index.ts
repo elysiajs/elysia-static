@@ -30,6 +30,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     etag: useETag = true,
     extension = true,
     indexHTML = true,
+    hideOpenApiRoute = true,
     decodeURI,
     silent
 }: StaticOptions<Prefix> = {}): Promise<Elysia> {
@@ -89,11 +90,16 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (isBun && absolutePath.endsWith('.html')) {
                     const htmlBundle = await import(absolutePath)
 
-                    app.get(pathName, htmlBundle.default)
+                    app.get(pathName, htmlBundle.default, {
+                        detail: { hide: hideOpenApiRoute }
+                    })
                     if (indexHTML && pathName.endsWith('/index.html'))
                         app.get(
                             pathName.replace('/index.html', ''),
-                            htmlBundle.default
+                            htmlBundle.default,
+                            {
+                                detail: { hide: hideOpenApiRoute }
+                            }
                         )
 
                     continue
@@ -199,7 +205,10 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                                         headers: initialHeaders
                                     }
                                   : undefined
-                          )
+                          ),
+                    {
+                        detail: { hide: hideOpenApiRoute }
+                    }
                 )
 
                 if (indexHTML && pathName.endsWith('/index.html'))
@@ -214,7 +223,10 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                                             headers: initialHeaders
                                         }
                                       : undefined
-                              )
+                              ),
+                        {
+                            detail: { hide: hideOpenApiRoute }
+                        }
                     )
             }
 
@@ -235,11 +247,16 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 const pathName = normalizePath(path.join(prefix, relativePath))
                 const htmlBundle = await import(absolutePath)
 
-                app.get(pathName, htmlBundle.default)
+                app.get(pathName, htmlBundle.default, {
+                    detail: { hide: hideOpenApiRoute }
+                })
                 if (indexHTML && pathName.endsWith('/index.html'))
                     app.get(
                         pathName.replace('/index.html', ''),
-                        htmlBundle.default
+                        htmlBundle.default,
+                        {
+                            detail: { hide: hideOpenApiRoute }
+                        }
                     )
             }
         }
@@ -251,7 +268,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     path.join(
                         assets,
                         decodeURI
-                            ? (fastDecodeURI(params['*']) ?? params['*'])
+                            ? fastDecodeURI(params['*']) ?? params['*']
                             : params['*']
                     )
                 )
@@ -328,6 +345,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
                     throw new NotFoundError()
                 }
+            },
+            {
+                detail: { hide: hideOpenApiRoute }
             }
         )
     }

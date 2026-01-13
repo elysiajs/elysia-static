@@ -106,14 +106,21 @@ export interface StaticOptions<Prefix extends string> {
      *
      * @default false
      */
-     decodeURI?: boolean
+    decodeURI?: boolean
 
-     /**
-      * silent
-      *
-      * @default false
-	  *
-	  * If set to true, suppresses all logs and warnings from the static plugin
-      */
-      silent?: boolean
+    /**
+     * @default true
+     *
+     * Hide routes for OpenAPI and swagger document.
+     */
+    hideOpenApiRoute?: boolean
+
+    /**
+     * silent
+     *
+     * @default false
+     *
+     * If set to true, suppresses all logs and warnings from the static plugin
+     */
+    silent?: boolean
 }
