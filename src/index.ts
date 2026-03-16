@@ -30,6 +30,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     etag: useETag = true,
     extension = true,
     indexHTML = true,
+    bundleHTML = true,
     decodeURI,
     silent
 }: StaticOptions<Prefix> = {}): Promise<Elysia> {
@@ -87,13 +88,23 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 let pathName = normalizePath(path.join(prefix, relativePath))
 
                 if (isBun && absolutePath.endsWith('.html')) {
-                    const htmlBundle = await import(absolutePath)
+                    let htmlFile
+                    try {
+                        htmlFile = bundleHTML ? (await import(absolutePath)).default : getFile(absolutePath)
+                    } catch (error) {
+                        if (!silent)
+                            console.error(
+                                `[@elysiajs/static] Failed to load HTML file: ${absolutePath}`,
+                                error
+                            )
+                        continue
+                    }
 
-                    app.get(pathName, htmlBundle.default)
+                    app.get(pathName, htmlFile)
                     if (indexHTML && pathName.endsWith('/index.html'))
                         app.get(
                             pathName.replace('/index.html', ''),
-                            htmlBundle.default
+                            htmlFile
                         )
 
                     continue
@@ -233,13 +244,23 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
                 let relativePath = absolutePath.replace(assetsDir, '')
                 const pathName = normalizePath(path.join(prefix, relativePath))
-                const htmlBundle = await import(absolutePath)
+                let htmlFile
+                try {
+                    htmlFile = bundleHTML ? (await import(absolutePath)).default : getFile(absolutePath)
+                } catch (error) {
+                    if (!silent)
+                        console.error(
+                            `[@elysiajs/static] Failed to load HTML file: ${absolutePath}`,
+                            error
+                        )
+                    continue
+                }
 
-                app.get(pathName, htmlBundle.default)
+                app.get(pathName, htmlFile)
                 if (indexHTML && pathName.endsWith('/index.html'))
                     app.get(
                         pathName.replace('/index.html', ''),
-                        htmlBundle.default
+                        htmlFile
                     )
             }
         }
