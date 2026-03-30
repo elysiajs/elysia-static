@@ -102,6 +102,15 @@ export interface StaticOptions<Prefix extends string> {
     indexHTML?: boolean
 
     /**
+     * @default true
+     *
+     * Enable bundling of HTML files (Bun only).
+     * When true, HTML imports using Bun’s bundler, JavaScript transpiler and CSS parser. [See more](https://bun.com/docs/bundler/fullstack)
+     * When false, HTML files are served directly from disk.
+     */
+	bundleHTML?: boolean
+
+    /**
      * decodeURI
      *
      * @default false

@@ -1,3 +1,7 @@
+# 1.4.8 - 16 Mar 2026
+Feature:
+- add bundleHTML option for HTML file handling
+
 # 1.4.7 - 17 Nov 2025
 Bug fix:
 - remove trailing slash on Windows
