@@ -1,3 +1,5 @@
+import type { DocumentDecoration } from 'elysia'
+
 export interface StaticOptions<Prefix extends string> {
     /**
      * @default "public"
@@ -108,7 +110,7 @@ export interface StaticOptions<Prefix extends string> {
      * When true, HTML imports using Bun’s bundler, JavaScript transpiler and CSS parser. [See more](https://bun.com/docs/bundler/fullstack)
      * When false, HTML files are served directly from disk.
      */
-	bundleHTML?: boolean
+    bundleHTML?: boolean
 
     /**
      * decodeURI
@@ -117,12 +119,7 @@ export interface StaticOptions<Prefix extends string> {
      */
     decodeURI?: boolean
 
-    /**
-     * @default true
-     *
-     * Hide routes for OpenAPI and swagger document.
-     */
-    hideOpenApiRoute?: boolean
+    detail?: DocumentDecoration | ((path: string) => DocumentDecoration)
 
     /**
      * silent

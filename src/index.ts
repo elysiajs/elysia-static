@@ -1,7 +1,5 @@
 import { Elysia, NotFoundError } from 'elysia'
 
-import type { Stats } from 'fs'
-
 import fastDecodeURI from 'fast-decode-uri-component'
 
 import {
@@ -30,7 +28,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     etag: useETag = true,
     extension = true,
     indexHTML = true,
-    hideOpenApiRoute = true,
+    detail,
     bundleHTML = true,
     decodeURI,
     silent
@@ -91,7 +89,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (isBun && absolutePath.endsWith('.html')) {
                     let htmlFile
                     try {
-                        htmlFile = bundleHTML ? (await import(absolutePath)).default : getFile(absolutePath)
+                        htmlFile = bundleHTML
+                            ? (await import(absolutePath)).default
+                            : getFile(absolutePath)
                     } catch (error) {
                         if (!silent)
                             console.error(
@@ -102,16 +102,20 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     }
 
                     app.get(pathName, htmlFile, {
-                        detail: { hide: hideOpenApiRoute }
+                        detail:
+                            typeof detail === 'function'
+                                ? detail(pathName)
+                                : detail
                     })
                     if (indexHTML && pathName.endsWith('/index.html'))
-                        app.get(
-                            pathName.replace('/index.html', ''),
-                            htmlFile,
-                            {
-                                detail: { hide: hideOpenApiRoute }
-                            }
-                        )
+                        app.get(pathName.replace('/index.html', ''), htmlFile, {
+                            detail:
+                                typeof detail === 'function'
+                                    ? detail(
+                                          pathName.replace('/index.html', '')
+                                      )
+                                    : detail
+                        })
 
                     continue
                 }
@@ -218,7 +222,10 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                                   : undefined
                           ),
                     {
-                        detail: { hide: hideOpenApiRoute }
+                        detail:
+                            typeof detail === 'function'
+                                ? detail(pathName)
+                                : detail
                     }
                 )
 
@@ -236,7 +243,12 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                                       : undefined
                               ),
                         {
-                            detail: { hide: hideOpenApiRoute }
+                            detail:
+                                typeof detail === 'function'
+                                    ? detail(
+                                          pathName.replace('/index.html', '')
+                                      )
+                                    : detail
                         }
                     )
             }
@@ -258,7 +270,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 const pathName = normalizePath(path.join(prefix, relativePath))
                 let htmlFile
                 try {
-                    htmlFile = bundleHTML ? (await import(absolutePath)).default : getFile(absolutePath)
+                    htmlFile = bundleHTML
+                        ? (await import(absolutePath)).default
+                        : getFile(absolutePath)
                 } catch (error) {
                     if (!silent)
                         console.error(
@@ -269,16 +283,16 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 }
 
                 app.get(pathName, htmlFile, {
-                    detail: { hide: hideOpenApiRoute }
+                    detail:
+                        typeof detail === 'function' ? detail(pathName) : detail
                 })
                 if (indexHTML && pathName.endsWith('/index.html'))
-                    app.get(
-                        pathName.replace('/index.html', ''),
-                        htmlFile,
-                        {
-                            detail: { hide: hideOpenApiRoute }
-                        }
-                    )
+                    app.get(pathName.replace('/index.html', ''), htmlFile, {
+                        detail:
+                            typeof detail === 'function'
+                                ? detail(pathName.replace('/index.html', ''))
+                                : detail
+                    })
             }
         }
 
@@ -289,7 +303,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     path.join(
                         assets,
                         decodeURI
-                            ? fastDecodeURI(params['*']) ?? params['*']
+                            ? (fastDecodeURI(params['*']) ?? params['*'])
                             : params['*']
                     )
                 )
@@ -368,7 +382,12 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 }
             },
             {
-                detail: { hide: hideOpenApiRoute }
+                detail:
+                    typeof detail === 'function'
+                        ? detail(
+                              `${prefix.endsWith('/') ? prefix.slice(0, -1) : prefix}/*`
+                          )
+                        : detail
             }
         )
     }

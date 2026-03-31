@@ -35,7 +35,7 @@
         "@types/fast-decode-uri-component": "^1.0.0",
         "@types/node": "^24",
         "@typescript-eslint/eslint-plugin": "^6.7.4",
-        "elysia": "^1.4.11",
+        "elysia": "^1.4.28",
         "esbuild-fix-imports-plugin": "^1.0.22",
         "eslint": "9.6.0",
         "fast-decode-uri-component": "^1.0.1",
