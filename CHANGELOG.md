@@ -1,3 +1,7 @@
+# 1.4.9 - 1 Apr 2026
+- add `detail` property to config for adding custom details in OpenAPI spec
+- [#59](https://github.com/elysiajs/elysia-static/pull/59) add hideOpenApiRoute option to hide detail in openapi generation
+
 # 1.4.8 - 16 Mar 2026
 Feature:
 - add bundleHTML option for HTML file handling
