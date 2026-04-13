@@ -443,19 +443,12 @@ describe('Static Plugin', () => {
         expect(res.status).toBe(404)
     })
 
-    it('does hide detail for openapi', async () => {
-        const app = new Elysia().use(staticPlugin())
-        await app.modules
-
-        for (const route of app.routes) {
-            expect(route.hooks.detail.hide).toBeTrue()
-        }
-    })
-
-    it('does not hide detail when hideOpenApiRoute is false', async () => {
+    it('accept detail', async () => {
         const app = new Elysia().use(
             staticPlugin({
-                hideOpenApiRoute: false
+                detail: {
+                    hide: false
+                }
             })
         )
         await app.modules
