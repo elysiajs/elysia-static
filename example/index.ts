@@ -4,7 +4,8 @@ import { staticPlugin } from '../src/index'
 const app = new Elysia()
     .use(
         await staticPlugin({
-            prefix: '/'
+			prefix: '/',
+			bundleHTML: false
         })
     )
     .listen(3000)

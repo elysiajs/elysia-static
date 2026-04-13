@@ -1,28 +1,48 @@
-name: Build and Test
+name: Publish
 
 on:
-    push:
-    pull_request:
+  release:
+    types: [published]
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  id-token: write
+
+env:
+  # Enable debug logging for actions
+  ACTIONS_RUNNER_DEBUG: true
 
 jobs:
-    build:
-        name: Build and test code
-        runs-on: ubuntu-latest
+  publish-npm:
+    name: 'Publish: npm Registry'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v4
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+      - name: 'Setup Bun'
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+          registry-url: "https://registry.npmjs.org"
 
-            - name: Setup bun
-              uses: oven-sh/setup-bun@v1
-              with:
-                  bun-version: latest
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
 
-            - name: Install packages
-              run: bun install
+      - name: Install packages
+        run: bun install
 
-            - name: Build code
-              run: bun run build
+      - name: Build code
+        run: bun run build
 
-            - name: Test
-              run: bun run test
+      - name: Test
+        run: bun run test
+
+      - name: 'Publish'
+        run: |
+          NODE_AUTH_TOKEN="" npm publish --provenance --access=public
