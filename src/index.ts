@@ -29,7 +29,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     extension = true,
     indexHTML = true,
     detail,
-    bundleHTML = true,
+    bunFullstack = false,
     decodeURI,
     silent
 }: StaticOptions<Prefix> = {}): Promise<Elysia> {
@@ -89,7 +89,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (isBun && absolutePath.endsWith('.html')) {
                     let htmlFile
                     try {
-                        htmlFile = bundleHTML
+                        htmlFile = bunFullstack
                             ? (await import(absolutePath)).default
                             : getFile(absolutePath)
                     } catch (error) {
@@ -270,7 +270,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 const pathName = normalizePath(path.join(prefix, relativePath))
                 let htmlFile
                 try {
-                    htmlFile = bundleHTML
+                    htmlFile = bunFullstack
                         ? (await import(absolutePath)).default
                         : getFile(absolutePath)
                 } catch (error) {
