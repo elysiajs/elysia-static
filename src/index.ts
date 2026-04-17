@@ -62,17 +62,16 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     const shouldIgnore = !ignorePatterns.length
         ? () => false
         : (file: string) =>
-              ignorePatterns.find((pattern) =>
-                  typeof pattern === 'string'
-                      ? pattern.includes(file)
-                      : pattern.test(file)
-              )
+            ignorePatterns.find((pattern) =>
+                typeof pattern === 'string'
+                    ? pattern.includes(file)
+                    : pattern.test(file)
+            )
 
     const app = new Elysia({
         name: 'static',
         seed: prefix
     })
-
     if (alwaysStatic) {
         const files = await listFiles(path.resolve(assets))
 
@@ -112,8 +111,8 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                             detail:
                                 typeof detail === 'function'
                                     ? detail(
-                                          pathName.replace('/index.html', '')
-                                      )
+                                        pathName.replace('/index.html', '')
+                                    )
                                     : detail
                         })
 
@@ -146,7 +145,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     headers: Record<string, string>
                 }) {
                     if (etag) {
-                        let cached = isCached(
+                        const cached = isCached(
                             requestHeaders as any,
                             etag,
                             absolutePath
@@ -214,13 +213,13 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     useETag
                         ? (handleCache as any)
                         : new Response(
-                              file,
-                              isNotEmpty(initialHeaders)
-                                  ? {
-                                        headers: initialHeaders
-                                    }
-                                  : undefined
-                          ),
+                            file,
+                            isNotEmpty(initialHeaders)
+                                ? {
+                                    headers: initialHeaders
+                                }
+                                : undefined
+                        ),
                     {
                         detail:
                             typeof detail === 'function'
@@ -235,19 +234,19 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                         useETag
                             ? (handleCache as any)
                             : new Response(
-                                  file,
-                                  isNotEmpty(initialHeaders)
-                                      ? {
-                                            headers: initialHeaders
-                                        }
-                                      : undefined
-                              ),
+                                file,
+                                isNotEmpty(initialHeaders)
+                                    ? {
+                                        headers: initialHeaders
+                                    }
+                                    : undefined
+                            ),
                         {
                             detail:
                                 typeof detail === 'function'
                                     ? detail(
-                                          pathName.replace('/index.html', '')
-                                      )
+                                        pathName.replace('/index.html', '')
+                                    )
                                     : detail
                         }
                     )
@@ -266,7 +265,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             for (const absolutePath of htmls) {
                 if (!absolutePath || shouldIgnore(absolutePath)) continue
 
-                let relativePath = absolutePath.replace(assetsDir, '')
+                const relativePath = absolutePath.replace(assetsDir, '')
                 const pathName = normalizePath(path.join(prefix, relativePath))
                 let htmlFile
                 try {
@@ -296,7 +295,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             }
         }
 
-        app.onError(() => {}).get(
+        app.onError(() => { }).get(
             `${prefix.endsWith('/') ? prefix.slice(0, -1) : prefix}/*`,
             async ({ params, headers: requestHeaders }) => {
                 const pathName = normalizePath(
@@ -317,30 +316,30 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     const fileStat = await fs.stat(pathName).catch(() => null)
                     if (!fileStat) throw new NotFoundError()
 
-                    if (!indexHTML && fileStat.isDirectory())
-                        throw new NotFoundError()
-
                     // @ts-ignore
                     let file:
                         | NonNullable<Awaited<ReturnType<typeof getFile>>>
                         | undefined
 
-                    if (!isBun && indexHTML) {
-                        const htmlPath = path.join(pathName, 'index.html')
-                        const cache = fileCache.get(htmlPath)
-                        if (cache) return cache.clone()
+                    if (fileStat.isDirectory()) {
+                        // check for a root index.html
+                        if (!isBun && indexHTML) {
+                            const htmlPath = path.join(pathName, 'index.html')
+                            const cache = fileCache.get(htmlPath)
+                            if (cache) return cache.clone()
 
-                        if (await fileExists(htmlPath))
-                            file = await getFile(htmlPath)
+                            if (await fileExists(htmlPath)) {
+                                file = await getFile(htmlPath)
+                            }
+                        }
+                    } else {
+                        if(await fileExists(pathName)){
+                            file = await getFile(pathName)
+                        }
                     }
 
-                    if (
-                        !file &&
-                        !fileStat.isDirectory() &&
-                        (await fileExists(pathName))
-                    )
-                        file = await getFile(pathName)
-                    else throw new NotFoundError()
+                    if (file === undefined)
+                        throw new NotFoundError()
 
                     if (!useETag)
                         return new Response(
@@ -385,8 +384,8 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 detail:
                     typeof detail === 'function'
                         ? detail(
-                              `${prefix.endsWith('/') ? prefix.slice(0, -1) : prefix}/*`
-                          )
+                            `${prefix.endsWith('/') ? prefix.slice(0, -1) : prefix}/*`
+                        )
                         : detail
             }
         )
