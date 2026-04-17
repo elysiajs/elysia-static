@@ -333,7 +333,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                             }
                         }
                     } else {
-                        if(await fileExists(pathName)){
+                        if (await fileExists(pathName)) {
                             file = await getFile(pathName)
                         }
                     }
