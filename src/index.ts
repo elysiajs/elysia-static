@@ -299,14 +299,15 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         app.onError(() => {}).get(
             `${prefix.endsWith('/') ? prefix.slice(0, -1) : prefix}/*`,
             async ({ params, headers: requestHeaders }) => {
-                const pathName = normalizePath(
-                    path.join(
-                        assets,
-                        decodeURI
-                            ? (fastDecodeURI(params['*']) ?? params['*'])
-                            : params['*']
-                    )
-                )
+                const userPart = decodeURI
+                    ? (fastDecodeURI(params['*']) ?? params['*'])
+                    : params['*']
+
+                const joined = path.resolve(assetsDir, userPart)
+                if (joined !== assetsDir && !joined.startsWith(assetsDir + path.sep))
+                    throw new NotFoundError()
+
+                const pathName = normalizePath(joined)
 
                 if (shouldIgnore(pathName)) throw new NotFoundError()
 
