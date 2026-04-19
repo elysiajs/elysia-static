@@ -1,5 +1,5 @@
 # @elysiajs/static
-Plugin for [elysia](https://github.com/saltyaom/elysia) for serving static folder.
+Plugin for [elysia](https://github.com/elysiajs/elysia) for serving static folder.
 
 ## Installation
 ```bash
