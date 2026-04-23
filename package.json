@@ -51,7 +51,7 @@
         "@types/bun": "^1.3.13",
         "@types/fast-decode-uri-component": "^1.0.0",
         "@types/node": "^24.12.2",
-        "@typescript-eslint/eslint-plugin": "^6.21.0",
+        "@typescript-eslint/eslint-plugin": "^8.59.0",
         "elysia": "^1.4.28",
         "esbuild-fix-imports-plugin": "^1.0.23",
         "eslint": "9.6.0",
