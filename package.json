@@ -57,7 +57,7 @@
         "eslint": "9.6.0",
         "fast-decode-uri-component": "^1.0.1",
         "tsup": "^8.5.1",
-        "typescript": "^5.9.3"
+        "typescript": "^6.0.3"
     },
     "peerDependencies": {
         "elysia": ">= 1.4.0"
