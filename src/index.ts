@@ -58,6 +58,10 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     const fileCache = new LRUCache<string, Response>()
 
     if (prefix === path.sep) prefix = '' as Prefix
+    const stripIndexHTML = (p: string) => {
+        const stripped = p.replace('/index.html', '')
+        return stripped === '' ? '/' : stripped
+    }
     const assetsDir = path.resolve(assets)
     const shouldIgnore = !ignorePatterns.length
         ? () => false
@@ -107,15 +111,15 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                                 ? detail(pathName)
                                 : detail
                     })
-                    if (indexHTML && pathName.endsWith('/index.html'))
-                        app.get(pathName.replace('/index.html', ''), htmlFile, {
+                    if (indexHTML && pathName.endsWith('/index.html')) {
+                        const indexPath = stripIndexHTML(pathName)
+                        app.get(indexPath, htmlFile, {
                             detail:
                                 typeof detail === 'function'
-                                    ? detail(
-                                          pathName.replace('/index.html', '')
-                                      )
+                                    ? detail(indexPath)
                                     : detail
                         })
+                    }
 
                     continue
                 }
@@ -229,9 +233,10 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     }
                 )
 
-                if (indexHTML && pathName.endsWith('/index.html'))
+                if (indexHTML && pathName.endsWith('/index.html')) {
+                    const indexPath = stripIndexHTML(pathName)
                     app.get(
-                        pathName.replace('/index.html', ''),
+                        indexPath,
                         useETag
                             ? (handleCache as any)
                             : new Response(
@@ -245,12 +250,11 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                         {
                             detail:
                                 typeof detail === 'function'
-                                    ? detail(
-                                          pathName.replace('/index.html', '')
-                                      )
+                                    ? detail(indexPath)
                                     : detail
                         }
                     )
+                }
             }
 
         return app
@@ -286,13 +290,15 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     detail:
                         typeof detail === 'function' ? detail(pathName) : detail
                 })
-                if (indexHTML && pathName.endsWith('/index.html'))
-                    app.get(pathName.replace('/index.html', ''), htmlFile, {
+                if (indexHTML && pathName.endsWith('/index.html')) {
+                    const indexPath = stripIndexHTML(pathName)
+                    app.get(indexPath, htmlFile, {
                         detail:
                             typeof detail === 'function'
-                                ? detail(pathName.replace('/index.html', ''))
+                                ? detail(indexPath)
                                 : detail
                     })
+                }
             }
         }
 
