@@ -3,6 +3,7 @@ import { staticPlugin } from '../src'
 
 import { describe, expect, it } from 'bun:test'
 import { join, sep } from 'path'
+import path from 'path'
 
 import { req, takodachi } from './utils'
 
@@ -456,5 +457,41 @@ describe('Static Plugin', () => {
         for (const route of app.routes) {
             expect(route.hooks.detail.hide).toBeFalse()
         }
+    })
+})
+
+describe('relative assets path resolution (issue #58)', () => {
+    it('serves files using default relative assets path', async () => {
+        const app = new Elysia().use(staticPlugin())
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+        expect(res.status).toBe(200)
+    })
+
+    it('serves files when cwd differs from project root', async () => {
+        const originalCwd = process.cwd()
+        const tempDir = path.join(originalCwd, '..')
+
+        try {
+            process.chdir(tempDir)
+
+            const app = new Elysia().use(staticPlugin())
+            await app.modules
+
+            const res = await app.handle(req('/public/takodachi.png'))
+            expect(res.status).toBe(200)
+        } finally {
+            process.chdir(originalCwd)
+        }
+    })
+
+    it('serves files when assets is an absolute path', async () => {
+        const absoluteAssets = path.resolve(process.cwd(), 'public')
+        const app = new Elysia().use(staticPlugin({ assets: absoluteAssets }))
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+        expect(res.status).toBe(200)
     })
 })
