@@ -311,7 +311,16 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 if (shouldIgnore(pathName)) throw new NotFoundError()
 
                 const cache = fileCache.get(pathName)
-                if (cache) return cache.clone()
+                if (cache) {
+                    const cachedEtag = cache.headers.get('etag')
+                    if (
+                        cachedEtag &&
+                        (await isCached(requestHeaders, cachedEtag, pathName))
+                    ) {
+                        return new Response(null, { status: 304 })
+                    }
+                    return cache.clone()
+                }
 
                 try {
                     const fileStat = await fs.stat(pathName).catch(() => null)
