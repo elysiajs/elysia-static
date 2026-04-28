@@ -461,7 +461,7 @@ describe('Static Plugin', () => {
 
 describe('conditional requests on lazy path', () => {
     it('should return 304 for GET with matching If-None-Match', async () => {
-        const app = new Elysia().use(staticPlugin())
+        const app = new Elysia().use(staticPlugin({ alwaysStatic: false }))
         await app.modules
 
         const first = await app.handle(req('/public/takodachi.png'))
@@ -482,7 +482,7 @@ describe('conditional requests on lazy path', () => {
     })
 
     it('should return 304 for HEAD with matching If-None-Match', async () => {
-        const app = new Elysia().use(staticPlugin())
+        const app = new Elysia().use(staticPlugin({ alwaysStatic: false }))
         await app.modules
 
         const first = await app.handle(req('/public/takodachi.png'))
