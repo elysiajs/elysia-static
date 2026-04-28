@@ -458,3 +458,45 @@ describe('Static Plugin', () => {
         }
     })
 })
+
+describe('conditional requests on lazy path', () => {
+    it('should return 304 for GET with matching If-None-Match', async () => {
+        const app = new Elysia().use(staticPlugin())
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+
+        const etag = first.headers.get('etag')
+        expect(typeof etag).toBe('string')
+        expect(etag!.length).toBeGreaterThan(0)
+
+        const second = await app.handle(
+            new Request('http://localhost/public/takodachi.png', {
+                headers: { 'If-None-Match': etag! }
+            })
+        )
+
+        expect(second.status).toBe(304)
+        expect((await second.text()).length).toBe(0)
+    })
+
+    it('should return 304 for HEAD with matching If-None-Match', async () => {
+        const app = new Elysia().use(staticPlugin())
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        const etag = first.headers.get('etag')
+        expect(typeof etag).toBe('string')
+
+        const second = await app.handle(
+            new Request('http://localhost/public/takodachi.png', {
+                method: 'HEAD',
+                headers: { 'If-None-Match': etag! }
+            })
+        )
+
+        expect(second.status).toBe(304)
+        expect((await second.text()).length).toBe(0)
+    })
+})
