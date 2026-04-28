@@ -499,4 +499,62 @@ describe('conditional requests on lazy path', () => {
         expect(second.status).toBe(304)
         expect((await second.text()).length).toBe(0)
     })
+
+    it('should return 200 for GET with stale/wrong If-None-Match', async () => {
+        const app = new Elysia().use(staticPlugin({ alwaysStatic: false }))
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+
+        const second = await app.handle(
+            new Request('http://localhost/public/takodachi.png', {
+                headers: { 'If-None-Match': '"stale-etag-value"' }
+            })
+        )
+
+        expect(second.status).toBe(200)
+        expect((await second.blob()).size).toBeGreaterThan(0)
+    })
+
+    it('should return 200 for HEAD without If-None-Match', async () => {
+        const app = new Elysia().use(staticPlugin({ alwaysStatic: false }))
+        await app.modules
+
+        const res = await app.handle(
+            new Request('http://localhost/public/takodachi.png', {
+                method: 'HEAD'
+            })
+        )
+
+        expect(res.status).toBe(200)
+        expect(res.headers.get('etag')).not.toBeNull()
+        expect((await res.text()).length).toBe(0)
+    })
+
+    it('regression: cache must not bypass the etag check', async () => {
+        const app = new Elysia().use(staticPlugin({ alwaysStatic: false }))
+        await app.modules
+
+        // 1. Warm the cache
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+        const etag = first.headers.get('etag')
+        expect(typeof etag).toBe('string')
+        expect(etag!.length).toBeGreaterThan(0)
+
+        // 2. Cache hit + matching etag must return 304, not 200
+        const second = await app.handle(
+            new Request('http://localhost/public/takodachi.png', {
+                headers: { 'If-None-Match': etag! }
+            })
+        )
+        expect(second.status).toBe(304)
+        expect((await second.text()).length).toBe(0)
+
+        // 3. Cache hit without etag must still return 200 with full body
+        const third = await app.handle(req('/public/takodachi.png'))
+        expect(third.status).toBe(200)
+        expect((await third.blob()).size).toBeGreaterThan(0)
+    })
 })
