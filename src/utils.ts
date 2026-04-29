@@ -77,6 +77,32 @@ export function fileExists(path: string) {
     )
 }
 
+/**
+ * Walks upward from an entrypoint file and returns the nearest directory
+ * containing a package.json.
+ *
+ * This is used to infer the application project root from Bun's entrypoint
+ * instead of relying only on process.cwd().
+ */
+export const findProjectRoot = async (
+    entrypoint: string
+): Promise<string | null> => {
+    if (!fs) getBuiltinModule()
+
+    let dir = path.dirname(entrypoint)
+
+    while (true) {
+        try {
+            await fs.stat(path.join(dir, 'package.json'))
+            return dir
+        } catch {}
+
+        const parent = path.dirname(dir)
+        if (parent === dir) return null
+        dir = parent
+    }
+}
+
 export class LRUCache<K, V> {
     private map = new Map<K, [V, number]>()
     private interval: number | undefined

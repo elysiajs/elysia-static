@@ -1,10 +1,14 @@
 import { Elysia } from 'elysia'
 import { staticPlugin } from '../src'
+import { findProjectRoot } from '../src/utils'
 
 import { describe, expect, it } from 'bun:test'
 import { join, sep } from 'path'
+import path from 'path'
 
 import { req, takodachi } from './utils'
+
+const __dirname = import.meta.dir
 
 describe('Static Plugin', () => {
     it('should get root path', async () => {
@@ -116,6 +120,19 @@ describe('Static Plugin', () => {
         const file = await app.handle(req('/public/takodachi.png'))
 
         expect(file.status).toBe(404)
+    })
+
+    it('ignores when pattern is a substring of the file path', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                ignorePatterns: ['takodachi']
+            })
+        )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+        expect(res.status).toBe(404)
     })
 
     it('always static', async () => {
@@ -456,5 +473,72 @@ describe('Static Plugin', () => {
         for (const route of app.routes) {
             expect(route.hooks.detail.hide).toBeFalse()
         }
+    })
+})
+
+describe('relative assets path resolution (issue #58)', () => {
+    it('serves files using default relative assets path', async () => {
+        const app = new Elysia().use(staticPlugin())
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+        expect(res.status).toBe(200)
+    })
+
+    it.serial('serves files when cwd differs from project root', async () => {
+        const originalCwd = process.cwd()
+        const tempDir = path.join(originalCwd, '..')
+
+        try {
+            process.chdir(tempDir)
+
+            const app = new Elysia().use(staticPlugin())
+            await app.modules
+
+            const res = await app.handle(req('/public/takodachi.png'))
+            expect(res.status).toBe(200)
+        } finally {
+            process.chdir(originalCwd)
+        }
+    })
+
+    it('serves files when assets is an absolute path', async () => {
+        const absoluteAssets = path.resolve(process.cwd(), 'public')
+        const app = new Elysia().use(staticPlugin({ assets: absoluteAssets }))
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+        expect(res.status).toBe(200)
+    })
+})
+
+describe('findProjectRoot', () => {
+    it('finds package.json walking up from a deep entrypoint', async () => {
+        const repoRoot = path.resolve(__dirname, '..')
+        const syntheticEntrypoint = path.join(repoRoot, 'src', 'index.ts')
+
+        const result = await findProjectRoot(syntheticEntrypoint)
+        expect(result).toBe(repoRoot)
+    })
+
+    it('finds package.json from a flat-layout entrypoint at the project root', async () => {
+        const repoRoot = path.resolve(__dirname, '..')
+        const flatEntrypoint = path.join(repoRoot, 'index.ts')
+
+        const result = await findProjectRoot(flatEntrypoint)
+        expect(result).toBe(repoRoot)
+    })
+
+    it('finds package.json from a deeper layout', async () => {
+        const repoRoot = path.resolve(__dirname, '..')
+        const deepEntrypoint = path.join(repoRoot, 'apps', 'web', 'src', 'server.ts')
+
+        const result = await findProjectRoot(deepEntrypoint)
+        expect(result).toBe(repoRoot)
+    })
+
+    it('returns null when no package.json is found above the entrypoint', async () => {
+        const result = await findProjectRoot('/tmp/no-such-project/index.ts')
+        expect(result).toBeNull()
     })
 })

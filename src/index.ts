@@ -5,6 +5,7 @@ import fastDecodeURI from 'fast-decode-uri-component'
 import {
     LRUCache,
     fileExists,
+    findProjectRoot,
     getBuiltinModule,
     listFiles,
     generateETag,
@@ -57,16 +58,55 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
     const fileCache = new LRUCache<string, Response>()
 
+    /**
+     * Returns the directory used as the base for resolving relative assets paths.
+     *
+     * In Bun, prefer the project root that owns the executed entrypoint so
+     * `assets: "public"` is stable even when the process is started from a
+     * different current working directory. Falls back to `process.cwd()` for
+     * non-Bun runtimes or when the entrypoint cannot be resolved.
+     */
+    const getDefaultAssetsBase = async () => {
+        if (!isBun) return process.cwd()
+
+        try {
+            const bun = await import('bun')
+
+            if (typeof bun.main === 'string') {
+                const root = await findProjectRoot(bun.main)
+                if (root) return root
+                return path.dirname(bun.main)
+            }
+        } catch {}
+
+        return process.cwd()
+    }
+
     if (prefix === path.sep) prefix = '' as Prefix
-    const assetsDir = path.resolve(assets)
+    const assetsDir = path.isAbsolute(assets)
+        ? path.resolve(assets)
+        : path.resolve(await getDefaultAssetsBase(), assets)
+    
     const shouldIgnore = !ignorePatterns.length
         ? () => false
-        : (file: string) =>
-              ignorePatterns.find((pattern) =>
-                  typeof pattern === 'string'
-                      ? pattern.includes(file)
-                      : pattern.test(file)
-              )
+        : (file: string) => {
+            const normalizedFile = normalizePath(file)
+            const relativeFile = normalizePath(
+                path.relative(assetsDir, file)
+            )
+
+            return ignorePatterns.find((pattern) => {
+                if (typeof pattern !== 'string')
+                    return pattern.test(normalizedFile) || pattern.test(relativeFile)
+
+                const normalizedPattern = normalizePath(pattern)
+
+                return (
+                    normalizedFile.includes(normalizedPattern) ||
+                    relativeFile.includes(normalizedPattern)
+                )
+            })
+        }
 
     const app = new Elysia({
         name: 'static',
@@ -74,7 +114,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     })
 
     if (alwaysStatic) {
-        const files = await listFiles(path.resolve(assets))
+        const files = await listFiles(assetsDir)
 
         if (files.length <= staticLimit)
             for (const absolutePath of files) {
@@ -261,7 +301,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         !(`GET_${prefix}/*` in app.routeTree)
     ) {
         if (isBun) {
-            const htmls = await listHTMLFiles(path.resolve(assets))
+            const htmls = await listHTMLFiles(assetsDir)
 
             for (const absolutePath of htmls) {
                 if (!absolutePath || shouldIgnore(absolutePath)) continue
@@ -301,7 +341,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             async ({ params, headers: requestHeaders }) => {
                 const pathName = normalizePath(
                     path.join(
-                        assets,
+                        assetsDir,
                         decodeURI
                             ? (fastDecodeURI(params['*']) ?? params['*'])
                             : params['*']
