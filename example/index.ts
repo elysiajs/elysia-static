@@ -1,11 +1,12 @@
 import { Elysia } from 'elysia'
 import { staticPlugin } from '../src/index'
-
-const app = new Elysia()
+import { node } from '@elysiajs/node'
+const app = new Elysia({ adapter: node() })
     .use(
         await staticPlugin({
-			prefix: '/',
-			bundleHTML: false
+            prefix: '/',
+            assets: 'public',
+            bunFullstack: false
         })
     )
     .listen(3000)
