@@ -5,6 +5,7 @@ import fastDecodeURI from 'fast-decode-uri-component'
 import {
     LRUCache,
     fileExists,
+    findProjectRoot,
     getBuiltinModule,
     listFiles,
     generateETag,
@@ -63,8 +64,11 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         try {
             const bun = await import('bun')
 
-            if (typeof bun.main === 'string')
-                return path.dirname(path.dirname(bun.main))
+            if (typeof bun.main === 'string') {
+                const root = await findProjectRoot(bun.main)
+                if (root) return root
+                return path.dirname(bun.main)
+            }
         } catch {}
 
         return process.cwd()
