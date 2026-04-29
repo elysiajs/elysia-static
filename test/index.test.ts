@@ -122,6 +122,19 @@ describe('Static Plugin', () => {
         expect(file.status).toBe(404)
     })
 
+    it('ignores when pattern is a substring of the file path', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                ignorePatterns: ['takodachi']
+            })
+        )
+
+        await app.modules
+
+        const res = await app.handle(req('/public/takodachi.png'))
+        expect(res.status).toBe(404)
+    })
+
     it('always static', async () => {
         const app = new Elysia().use(
             staticPlugin({
