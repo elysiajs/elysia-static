@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia'
 import { staticPlugin } from '../src'
 
-import { describe, expect, it } from 'bun:test'
+import { expect, it, describe } from 'vitest'
 import { join, sep } from 'path'
 
 import { req, takodachi } from './utils'
@@ -17,7 +17,7 @@ describe('Static Plugin', () => {
             .then((r) => r.blob())
             .then((r) => r.text())
 
-        expect(res).toBe(takodachi)
+        expect(res).toBe(takodachi.toString())
     })
 
     it('should get nested path', async () => {
@@ -27,7 +27,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/public/nested/takodachi.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toBe(takodachi.toString())
     })
 
     it('should get different path', async () => {
@@ -41,7 +41,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/public/tako.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toBe(takodachi.toString())
     })
 
     it('should handle prefix', async () => {
@@ -55,7 +55,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/static/takodachi.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toBe(takodachi.toString())
     })
 
     it('should handle empty prefix', async () => {
@@ -69,7 +69,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/takodachi.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toBe(takodachi.toString())
     })
 
     it('should supports multiple public', async () => {
@@ -132,14 +132,14 @@ describe('Static Plugin', () => {
             .then((r) => r.blob())
             .then((r) => r.text())
 
-        expect(res).toBe(takodachi)
+        expect(res).toBe(takodachi.toString())
     })
 
     it('always static with assets on an absolute path', async () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                assets: join(import.meta.dir, '../public')
+                assets: join(expect.getState().testPath!, '../../public')
             })
         )
 
@@ -147,7 +147,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/public/takodachi.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toEqual(takodachi.toString())
     })
 
     it('exclude extension', async () => {
@@ -165,7 +165,7 @@ describe('Static Plugin', () => {
             .then((r) => r.blob())
             .then((r) => r.text())
 
-        expect(res).toBe(takodachi)
+        expect(res).toBe(takodachi.toString())
     })
 
     it('return custom headers', async () => {
@@ -454,7 +454,23 @@ describe('Static Plugin', () => {
         await app.modules
 
         for (const route of app.routes) {
-            expect(route.hooks.detail.hide).toBeFalse()
+            expect(route.hooks.detail.hide).toBe(false)
         }
+    })
+    it('should return necessary content-type headers', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                detail: {
+                    hide: false
+                },
+                headers: {
+                    hii: 'uwa'
+                }
+            })
+        )
+        await app.modules
+
+        const jsFile = await app.handle(req('/public/js/index.js'))
+        expect(jsFile.headers.get('content-type')).toContain('/javascript')
     })
 })
