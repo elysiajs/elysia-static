@@ -1,5 +1,6 @@
 import type { BunFile } from 'bun'
-import type { Stats } from 'fs'
+import type { ReadStream, Stats } from 'fs'
+import { ElysiaFile, file } from 'elysia'
 
 let fs: typeof import('fs/promises')
 let path: typeof import('path')
@@ -68,11 +69,16 @@ export async function listFiles(dir: string): Promise<string[]> {
     return all.flat()
 }
 
+/**
+ * File exists and is not a directory
+ * @param path
+ * @returns
+ */
 export function fileExists(path: string) {
     if (!fs) getBuiltinModule()
 
     return fs.stat(path).then(
-        () => true,
+        (data) => !data.isDirectory(),
         () => false
     )
 }
@@ -192,16 +198,13 @@ export function isCached(
 let Crypto: typeof import('crypto')
 
 export function getFile(path: string) {
-    if (isBun) return Bun.file(path)
-
-    if (!fs) getBuiltinModule()
-    return fs.readFile(path)
+    return file(path)
 }
 
-export async function generateETag(file: BunFile | Buffer<ArrayBufferLike>) {
+export async function generateETag(file: ElysiaFile) {
     if (isBun)
         return new Bun.CryptoHasher('md5')
-            .update(await (file as BunFile).arrayBuffer())
+            .update(await (file.value as BunFile).arrayBuffer())
             .digest('base64')
 
     if (!Crypto) Crypto = process.getBuiltinModule('crypto')
@@ -209,10 +212,9 @@ export async function generateETag(file: BunFile | Buffer<ArrayBufferLike>) {
         return void console.warn(
             '[@elysiajs/static] crypto is required to generate etag.'
         )
-
-    return Crypto.createHash('md5')
-        .update(file as Buffer)
-        .digest('base64')
+    if (!fs) getBuiltinModule()
+    const buffer = await fs.readFile(file.path) // redundant read, but the file.value ReadStream can only be read once...
+    return Crypto.createHash('md5').update(buffer).digest('base64')
 }
 
 export const isNotEmpty = (obj?: Object) => {

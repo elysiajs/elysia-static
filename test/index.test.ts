@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia'
 import { staticPlugin } from '../src'
 
-import { describe, expect, it } from 'bun:test'
+import { expect, it, describe } from 'vitest'
 import { join, sep } from 'path'
 
 import { req, takodachi } from './utils'
@@ -17,7 +17,7 @@ describe('Static Plugin', () => {
             .then((r) => r.blob())
             .then((r) => r.text())
 
-        expect(res).toBe(takodachi)
+        expect(res).toBe(takodachi.toString())
     })
 
     it('should get nested path', async () => {
@@ -27,7 +27,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/public/nested/takodachi.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toBe(takodachi.toString())
     })
 
     it('should get different path', async () => {
@@ -41,7 +41,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/public/tako.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toBe(takodachi.toString())
     })
 
     it('should handle prefix', async () => {
@@ -55,7 +55,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/static/takodachi.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toBe(takodachi.toString())
     })
 
     it('should handle empty prefix', async () => {
@@ -69,7 +69,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/takodachi.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toBe(takodachi.toString())
     })
 
     it('should supports multiple public', async () => {
@@ -132,14 +132,14 @@ describe('Static Plugin', () => {
             .then((r) => r.blob())
             .then((r) => r.text())
 
-        expect(res).toBe(takodachi)
+        expect(res).toBe(takodachi.toString())
     })
 
     it('always static with assets on an absolute path', async () => {
         const app = new Elysia().use(
             staticPlugin({
                 alwaysStatic: true,
-                assets: join(import.meta.dir, '../public')
+                assets: join(expect.getState().testPath!, '../../public')
             })
         )
 
@@ -147,7 +147,7 @@ describe('Static Plugin', () => {
 
         const res = await app.handle(req('/public/takodachi.png'))
         const blob = await res.blob()
-        expect(await blob.text()).toBe(takodachi)
+        expect(await blob.text()).toEqual(takodachi.toString())
     })
 
     it('exclude extension', async () => {
@@ -165,7 +165,7 @@ describe('Static Plugin', () => {
             .then((r) => r.blob())
             .then((r) => r.text())
 
-        expect(res).toBe(takodachi)
+        expect(res).toBe(takodachi.toString())
     })
 
     it('return custom headers', async () => {
@@ -454,7 +454,219 @@ describe('Static Plugin', () => {
         await app.modules
 
         for (const route of app.routes) {
-            expect(route.hooks.detail.hide).toBeFalse()
+            expect(route.hooks.detail.hide).toBe(false)
         }
     })
+    it('should return necessary content-type headers', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                detail: {
+                    hide: false
+                },
+                headers: {
+                    hii: 'uwa'
+                }
+            })
+        )
+        await app.modules
+
+        const jsFile = await app.handle(req('/public/js/index.js'))
+        expect(jsFile.headers.get('content-type')).toContain('/javascript')
+    })
+
+    it('preserves content-type on cached file responses', async () => {
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const first = await app.handle(req('/public/js/index.js'))
+        expect(first.status).toBe(200)
+        expect(first.headers.get('content-type')).toContain('/javascript')
+
+        const second = await app.handle(req('/public/js/index.js'))
+        expect(second.status).toBe(200)
+        expect(second.headers.get('content-type')).toContain('/javascript')
+    })
+
+    it('preserves custom headers on cached file responses', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                headers: {
+                    'x-static-test': 'cached'
+                }
+            })
+        )
+
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+        expect(first.headers.get('x-static-test')).toBe('cached')
+
+        const second = await app.handle(req('/public/takodachi.png'))
+        expect(second.status).toBe(200)
+        expect(second.headers.get('x-static-test')).toBe('cached')
+    })
+
+    it('preserves etag and cache-control headers on cached file responses', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                maxAge: 3600,
+                directive: 'private'
+            })
+        )
+
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+
+        const etag = first.headers.get('etag')
+        expect(etag).toBeTruthy()
+        expect(first.headers.get('cache-control')).toBe('private, max-age=3600')
+
+        const second = await app.handle(req('/public/takodachi.png'))
+        expect(second.status).toBe(200)
+        expect(second.headers.get('etag')).toBe(etag)
+        expect(second.headers.get('cache-control')).toBe(
+            'private, max-age=3600'
+        )
+    })
+
+    it('returns 304 for if-none-match after the file has been cached', async () => {
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+
+        const etag = first.headers.get('etag')
+        expect(etag).toBeTruthy()
+
+        const request = req('/public/takodachi.png')
+        request.headers.set('if-none-match', etag!)
+
+        const second = await app.handle(request)
+
+        expect(second.status).toBe(304)
+        expect(second.body).toBe(null)
+    })
+
+    it('does not return 304 when cache-control no-cache is sent after file is cached', async () => {
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+
+        const etag = first.headers.get('etag')
+        expect(etag).toBeTruthy()
+
+        const request = req('/public/takodachi.png')
+        request.headers.set('if-none-match', etag!)
+        request.headers.set('cache-control', 'no-cache')
+
+        const second = await app.handle(request)
+
+        expect(second.status).toBe(200)
+        expect(await second.blob().then((b) => b.text())).toBe(takodachi.toString())
+    })
+
+    it('returns 304 for if-none-match after cached alwaysStatic route response', async () => {
+        const app = new Elysia().use(
+            staticPlugin({
+                alwaysStatic: true,
+                extension: false
+            })
+        )
+
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi'))
+        expect(first.status).toBe(200)
+
+        const etag = first.headers.get('etag')
+        expect(etag).toBeTruthy()
+
+        const request = req('/public/takodachi')
+        request.headers.set('if-none-match', etag!)
+
+        const second = await app.handle(request)
+
+        expect(second.status).toBe(304)
+        expect(second.body).toBe(null)
+    })
+
+    it('serves index.html from cache with content-type and cache headers', async () => {
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const first = await app.handle(req('/public/html'))
+        expect(first.status).toBe(200)
+        expect(first.headers.get('content-type')).toContain('text/html')
+
+        const etag = first.headers.get('etag')
+        expect(etag).toBeTruthy()
+        expect(first.headers.get('cache-control')).toBe('public, max-age=86400')
+
+        const second = await app.handle(req('/public/html'))
+        expect(second.status).toBe(200)
+        expect(second.headers.get('content-type')).toContain('text/html')
+        expect(second.headers.get('etag')).toBe(etag)
+        expect(second.headers.get('cache-control')).toBe('public, max-age=86400')
+    })
+
+    it('returns 304 for cached index.html default route', async () => {
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const first = await app.handle(req('/public/html'))
+        expect(first.status).toBe(200)
+
+        const etag = first.headers.get('etag')
+        expect(etag).toBeTruthy()
+
+        const request = req('/public/html')
+        request.headers.set('if-none-match', etag!)
+
+        const second = await app.handle(request)
+
+        expect(second.status).toBe(304)
+        expect(second.body).toBe(null)
+    })
+
+    it('preserves image content-type on cached PNG file responses', async () => {
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+        expect(first.headers.get('content-type')).toContain('image/png')
+
+        const second = await app.handle(req('/public/takodachi.png'))
+        expect(second.status).toBe(200)
+        expect(second.headers.get('content-type')).toContain('image/png')
+    })
+
+    it('suppresses etag and cache-control on cached file responses when etag is false', async () => {
+        const app = new Elysia().use(staticPlugin({ etag: false }))
+
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+        expect(first.headers.get('etag')).toBeNull()
+        expect(first.headers.get('cache-control')).toBeNull()
+
+        const second = await app.handle(req('/public/takodachi.png'))
+        expect(second.status).toBe(200)
+        expect(second.headers.get('etag')).toBeNull()
+        expect(second.headers.get('cache-control')).toBeNull()
+    })
+
 })
