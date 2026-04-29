@@ -638,4 +638,35 @@ describe('Static Plugin', () => {
         expect(second.status).toBe(304)
         expect(second.body).toBe(null)
     })
+
+    it('preserves image content-type on cached PNG file responses', async () => {
+        const app = new Elysia().use(staticPlugin())
+
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+        expect(first.headers.get('content-type')).toContain('image/png')
+
+        const second = await app.handle(req('/public/takodachi.png'))
+        expect(second.status).toBe(200)
+        expect(second.headers.get('content-type')).toContain('image/png')
+    })
+
+    it('suppresses etag and cache-control on cached file responses when etag is false', async () => {
+        const app = new Elysia().use(staticPlugin({ etag: false }))
+
+        await app.modules
+
+        const first = await app.handle(req('/public/takodachi.png'))
+        expect(first.status).toBe(200)
+        expect(first.headers.get('etag')).toBeNull()
+        expect(first.headers.get('cache-control')).toBeNull()
+
+        const second = await app.handle(req('/public/takodachi.png'))
+        expect(second.status).toBe(200)
+        expect(second.headers.get('etag')).toBeNull()
+        expect(second.headers.get('cache-control')).toBeNull()
+    })
+
 })
