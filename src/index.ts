@@ -1,10 +1,4 @@
-import {
-    Elysia,
-    ElysiaFile,
-    HTTPHeaders,
-    NotFoundError,
-    StatusMap
-} from 'elysia'
+import { Elysia, ElysiaFile, NotFoundError, type Context } from 'elysia'
 
 import fastDecodeURI from 'fast-decode-uri-component'
 
@@ -18,7 +12,6 @@ import {
     getFile
 } from './utils'
 import type { StaticOptions } from './types'
-import { ElysiaCookie } from 'elysia/cookies'
 
 export async function staticPlugin<const Prefix extends string = '/prefix'>({
     assets = 'public',
@@ -79,12 +72,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     }: {
         relativeFilePath: string
         requestHeaders: Record<string, string | undefined>
-        set: {
-            headers: HTTPHeaders
-            status?: number | keyof StatusMap
-            redirect?: string
-            cookie?: Record<string, ElysiaCookie>
-        }
+        set: Context['set']
     }) {
         const setInitialHeaders = () => {
             for (const [headerName, headerVal] of Object.entries(
