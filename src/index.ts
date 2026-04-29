@@ -58,6 +58,14 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
     const fileCache = new LRUCache<string, Response>()
 
+    /**
+     * Returns the directory used as the base for resolving relative assets paths.
+     *
+     * In Bun, prefer the project root that owns the executed entrypoint so
+     * `assets: "public"` is stable even when the process is started from a
+     * different current working directory. Falls back to `process.cwd()` for
+     * non-Bun runtimes or when the entrypoint cannot be resolved.
+     */
     const getDefaultAssetsBase = async () => {
         if (!isBun) return process.cwd()
 

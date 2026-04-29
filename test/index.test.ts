@@ -485,7 +485,7 @@ describe('relative assets path resolution (issue #58)', () => {
         expect(res.status).toBe(200)
     })
 
-    it('serves files when cwd differs from project root', async () => {
+    it.serial('serves files when cwd differs from project root', async () => {
         const originalCwd = process.cwd()
         const tempDir = path.join(originalCwd, '..')
 

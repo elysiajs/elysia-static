@@ -77,6 +77,13 @@ export function fileExists(path: string) {
     )
 }
 
+/**
+ * Walks upward from an entrypoint file and returns the nearest directory
+ * containing a package.json.
+ *
+ * This is used to infer the application project root from Bun's entrypoint
+ * instead of relying only on process.cwd().
+ */
 export const findProjectRoot = async (
     entrypoint: string
 ): Promise<string | null> => {
