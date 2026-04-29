@@ -61,5 +61,8 @@
     },
     "peerDependencies": {
         "elysia": ">= 1.4.0"
+    },
+    "dependencies": {
+        "vitest": "^4.1.5"
     }
 }
