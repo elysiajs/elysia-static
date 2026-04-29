@@ -9,7 +9,8 @@ import {
     listFiles,
     generateETag,
     isCached,
-    getFile
+    getFile,
+    isBun
 } from './utils'
 import type { StaticOptions } from './types'
 
@@ -65,14 +66,20 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                       : pattern.test(file)
               )
 
+    /**
+     *
+     * Serves `preBundledFile` always, if this argument is passed in
+     */
     async function getFileResponse({
         relativeFilePath,
         requestHeaders,
-        set
+        set,
+        preBundledFile
     }: {
         relativeFilePath: string
         requestHeaders: Record<string, string | undefined>
         set: Context['set']
+        preBundledFile?: ElysiaFile
     }) {
         const setInitialHeaders = () => {
             for (const [headerName, headerVal] of Object.entries(
@@ -107,8 +114,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
         if (shouldIgnore(relativeFilePath)) throw new NotFoundError()
 
-        const cachedFile = fileCache.get(relativeFilePath)
-        if (cachedFile) return finalizeFileResponse(cachedFile, relativeFilePath)
+        const cachedFile = preBundledFile ?? fileCache.get(relativeFilePath)
+        if (cachedFile)
+            return finalizeFileResponse(cachedFile, relativeFilePath)
 
         try {
             const fileStat = await fs.stat(relativeFilePath).catch(() => null)
@@ -126,21 +134,20 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 const htmlPath = path.join(relativeFilePath, 'index.html')
                 const cachedFile = fileCache.get(htmlPath)
 
-                if (cachedFile) return finalizeFileResponse(cachedFile, htmlPath)
+                if (cachedFile)
+                    return finalizeFileResponse(cachedFile, htmlPath)
 
                 if (await fileExists(htmlPath)) {
                     cacheKey = htmlPath
-
-                    if (bunFullstack) {
-                        file = (await import(htmlPath)).default
-                    } else {
-                        file = getFile(htmlPath)
-                    }
+                    file = getFile(htmlPath)
                 }
             }
 
             if (!fileStat.isDirectory()) {
                 file = getFile(relativeFilePath)
+            }
+            if (relativeFilePath.endsWith('.html') && isBun && bunFullstack) {
+                throw Error("File should've been pre-bundled!")
             }
 
             if (!file) throw new NotFoundError()
@@ -161,76 +168,84 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         seed: prefix
     })
 
-    if (alwaysStatic) {
-        const files = await listFiles(path.resolve(assets))
+    const files = await listFiles(path.resolve(assets))
 
-        if (files.length <= staticLimit)
-            for (const absoluteFilePath of files) {
-                if (!absoluteFilePath || shouldIgnore(absoluteFilePath))
-                    continue
+    if (files.length <= staticLimit)
+        // mount files as static routes
+        for (const absoluteFilePath of files) {
+            const shouldBundleFileWithBun =
+                isBun && bunFullstack && absoluteFilePath.endsWith('.html')
+            if (
+                !absoluteFilePath ||
+                shouldIgnore(absoluteFilePath) ||
+                (!alwaysStatic && !shouldBundleFileWithBun) // if shouldBundleFileWithBun, we pre-bundle the HTML files and add them as routes regardless if alwaysStatic is true or not (matches current implementation)
+            )
+                continue
 
-                let relativeFilePath = absoluteFilePath.replace(assetsDir, '')
-                if (decodeURI)
-                    relativeFilePath =
-                        fastDecodeURI(relativeFilePath) ?? relativeFilePath
+            let relativeFilePath = absoluteFilePath.replace(assetsDir, '')
+            if (decodeURI)
+                relativeFilePath =
+                    fastDecodeURI(relativeFilePath) ?? relativeFilePath
 
-                let urlPath = normalizePath(path.join(prefix, relativeFilePath))
+            let urlPath = normalizePath(path.join(prefix, relativeFilePath))
 
-                if (!extension)
-                    urlPath = normalizePath(
-                        urlPath.slice(0, urlPath.lastIndexOf('.'))
+            if (!extension)
+                urlPath = normalizePath(
+                    urlPath.slice(0, urlPath.lastIndexOf('.'))
+                )
+
+            if (!(await fileExists(absoluteFilePath))) {
+                if (!silent)
+                    console.warn(
+                        `[@elysiajs/static] Failed to load file: ${absoluteFilePath}`
                     )
 
-                if (!(await fileExists(absoluteFilePath))) {
-                    // idk if we really need the isDirectory part though
-                    if (!silent)
-                        console.warn(
-                            `[@elysiajs/static] Failed to load file: ${absoluteFilePath}`
-                        )
+                return new Elysia()
+            }
+            const preBUNdledHTML: ElysiaFile | undefined =
+                shouldBundleFileWithBun
+                    ? (await import(absoluteFilePath)).default
+                    : undefined // pun intended
 
-                    return new Elysia()
+            app.get(
+                urlPath,
+                ({ headers, set }) =>
+                    getFileResponse({
+                        relativeFilePath: absoluteFilePath,
+                        requestHeaders: headers,
+                        set,
+                        preBundledFile: preBUNdledHTML
+                    }),
+                {
+                    detail:
+                        typeof detail === 'function' ? detail(urlPath) : detail
                 }
+            )
 
+            if (indexHTML && urlPath.endsWith('/index.html'))
                 app.get(
-                    urlPath,
+                    urlPath.replace('/index.html', ''),
                     ({ headers, set }) =>
                         getFileResponse({
                             relativeFilePath: absoluteFilePath,
                             requestHeaders: headers,
-                            set
+                            set,
+                            preBundledFile: preBUNdledHTML
                         }),
                     {
                         detail:
                             typeof detail === 'function'
-                                ? detail(urlPath)
+                                ? detail(urlPath.replace('/index.html', ''))
                                 : detail
                     }
                 )
+        }
 
-                if (indexHTML && urlPath.endsWith('/index.html'))
-                    app.get(
-                        urlPath.replace('/index.html', ''),
-                        ({ headers, set }) =>
-                            getFileResponse({
-                                relativeFilePath: absoluteFilePath,
-                                requestHeaders: headers,
-                                set
-                            }),
-                        {
-                            detail:
-                                typeof detail === 'function'
-                                    ? detail(urlPath.replace('/index.html', ''))
-                                    : detail
-                        }
-                    )
-            }
-
-        return app
-    }
-
+    // set up catch-all route for static assets
     if (
         // @ts-ignore private property
-        !(`GET_${prefix}/*` in app.routeTree)
+        !(`GET_${prefix}/*` in app.routeTree) &&
+        !alwaysStatic
     ) {
         app.onError(() => {}).get(
             `${prefix.endsWith('/') ? prefix.slice(0, -1) : prefix}/*`,

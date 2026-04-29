@@ -24,7 +24,7 @@ export interface StaticOptions<Prefix extends string> {
     /**
      * @default false unless `NODE_ENV` is 'production'
      *
-     * Should file always be served statically
+     * Should file always be served statically (note: if bunFullstack is set to true, any html files will still be served statically as pre-defined routes.)
      */
     alwaysStatic?: boolean
     /**
