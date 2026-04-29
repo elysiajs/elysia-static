@@ -90,17 +90,37 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             for (const [headerName, headerVal] of Object.entries(
                 initialHeaders ?? {}
             )) {
-                set['headers'][headerName] = headerVal
+                set.headers[headerName] = headerVal
             }
+        }
+
+        const finalizeFileResponse = async (
+            file: ElysiaFile,
+            filePath: string
+        ) => {
+            setInitialHeaders()
+
+            if (!useETag) return file
+
+            const etag = await generateETag(file)
+
+            if (etag && (await isCached(requestHeaders, etag, filePath)))
+                return new Response(null, {
+                    status: 304
+                })
+
+            set.headers['etag'] = etag
+            set.headers['cache-control'] = maxAge
+                ? `${directive}, max-age=${maxAge}`
+                : directive
+
+            return file
         }
 
         if (shouldIgnore(relativeFilePath)) throw new NotFoundError()
 
         const cachedFile = fileCache.get(relativeFilePath)
-        if (cachedFile) {
-            setInitialHeaders()
-            return cachedFile
-        }
+        if (cachedFile) return finalizeFileResponse(cachedFile, relativeFilePath)
 
         try {
             const fileStat = await fs.stat(relativeFilePath).catch(() => null)
@@ -108,55 +128,38 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
 
             if (!indexHTML && fileStat.isDirectory()) throw new NotFoundError()
 
-            // @ts-ignore
             let file:
                 | NonNullable<Awaited<ReturnType<typeof getFile>>>
                 | undefined
 
+            let cacheKey = relativeFilePath
+
             if (fileStat.isDirectory() && indexHTML) {
                 const htmlPath = path.join(relativeFilePath, 'index.html')
                 const cachedFile = fileCache.get(htmlPath)
-                if (cachedFile) {
-                    setInitialHeaders()
-                    return cachedFile
-                }
+
+                if (cachedFile) return finalizeFileResponse(cachedFile, htmlPath)
 
                 if (await fileExists(htmlPath)) {
+                    cacheKey = htmlPath
+
                     if (bunFullstack) {
-                        file = (await import(htmlPath)).default // TODO: full path needed?
+                        file = (await import(htmlPath)).default
                     } else {
                         file = getFile(htmlPath)
                     }
                 }
             }
+
             if (!fileStat.isDirectory()) {
                 file = getFile(relativeFilePath)
             }
 
             if (!file) throw new NotFoundError()
-            fileCache.set(relativeFilePath, file)
 
-            if (!useETag) {
-                setInitialHeaders()
-                return file
-            }
+            fileCache.set(cacheKey, file)
 
-            const etag = await generateETag(file)
-            if (
-                etag &&
-                (await isCached(requestHeaders, etag, relativeFilePath))
-            )
-                return new Response(null, {
-                    status: 304
-                })
-
-            setInitialHeaders()
-
-            set.headers['etag'] = etag
-            set.headers['cache-control'] = maxAge
-                ? `${directive}, max-age=${maxAge}`
-                : directive
-            return file
+            return finalizeFileResponse(file, cacheKey)
         } catch (error) {
             if (error instanceof NotFoundError) throw error
             if (!silent) console.error(`[@elysiajs/static]`, error)
