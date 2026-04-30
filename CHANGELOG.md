@@ -1,3 +1,7 @@
+# 1.4.10 - 24 Apr 2026
+Chore:
+- Publish under @elysia scope
+
 # 1.4.9 - 13 Apr 2026
 - add `detail` property to config for adding custom details in OpenAPI spec
 - [#59](https://github.com/elysiajs/elysia-static/pull/59) add hideOpenApiRoute option to hide detail in openapi generation

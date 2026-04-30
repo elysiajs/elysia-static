@@ -1,19 +1,19 @@
-# @elysiajs/static
-Plugin for [elysia](https://github.com/elysiajs/elysia) for serving static folder.
+# @elysia/static
+[Elysia](https://github.com/elysiajs/elysia) plugin for serving static files.
 
 ## Installation
 ```bash
-bun add @elysiajs/static
+bun add @elysia/static
 ```
 
 ## Example
 ```typescript
 import { Elysia } from 'elysia'
-import { staticPlugin } from '@elysiajs/static'
+import { staticPlugin } from '@elysia/static'
 
 const app = new Elysia()
     .use(staticPlugin())
-    .listen(8080)
+    .listen(3000)
 ```
 
 ## Config
@@ -38,3 +38,5 @@ If total files exceed this number, the file will be handled via wildcard instead
 @default boolean
 
 If set to true, the file will always use a static path instead
+
+See [documentation](https://elysiajs.com/plugins/static) for more details.
