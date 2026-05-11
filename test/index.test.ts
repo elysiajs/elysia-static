@@ -719,7 +719,7 @@ describe('Static Plugin', () => {
     })
 
     it('serves index.html from cache with content-type and cache headers', async () => {
-        const app = new Elysia().use(staticPlugin())
+        const app = new Elysia().use(staticPlugin({ bunFullstack: false }))
 
         await app.modules
 
@@ -741,7 +741,7 @@ describe('Static Plugin', () => {
     })
 
     it('returns 304 for cached index.html default route', async () => {
-        const app = new Elysia().use(staticPlugin())
+        const app = new Elysia().use(staticPlugin({ bunFullstack: false }))
 
         await app.modules
 
@@ -857,7 +857,8 @@ describe('Static Plugin', () => {
                     assets: 'public',
                     prefix: '',
                     indexHTML: true,
-                    alwaysStatic
+                    alwaysStatic,
+                    bunFullstack: false
                 })
             )
 
