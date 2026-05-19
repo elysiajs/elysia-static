@@ -36,7 +36,8 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     extension = true,
     indexHTML = true,
     detail,
-    bunFullstack = false,
+    bundleHTML = true,
+    bunFullstack,
     decodeURI,
     silent
 }: StaticOptions<Prefix> = {}): Promise<Elysia> {
@@ -50,6 +51,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             )
 
         return new Elysia()
+    }
+    if (bunFullstack === undefined) {
+        bunFullstack = bundleHTML
     }
 
     const builtinModule = getBuiltinModule()

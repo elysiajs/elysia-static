@@ -24,7 +24,10 @@ export interface StaticOptions<Prefix extends string> {
     /**
      * @default false unless `NODE_ENV` is 'production'
      *
-     * Should file always be served statically (note: if bunFullstack is set to true, any html files will still be served statically as pre-defined routes.)
+     * If set to true, the plugin will mount around at most
+     * `staticLimit` routes before defaulting to wildcard.
+     * If false, all routes will go under the wildcard route,
+     * with the exclusion of any HTML files bundled by Bun.
      */
     alwaysStatic?: boolean
     /**
@@ -37,7 +40,7 @@ export interface StaticOptions<Prefix extends string> {
     ignorePatterns?: Array<string | RegExp>
 
     /**
-     * Indicate if file extension is required
+     * Indicates if file extension is required in URL request
      *
      * Only works if `alwaysStatic` is set to true
      *
@@ -60,9 +63,6 @@ export interface StaticOptions<Prefix extends string> {
      * @default true
      *
      * If set to false, browser caching will be disabled
-     *
-     * On Bun, if set to false, performance will be significantly improved
-     * as it can be inline as a static resource
      */
     etag?: boolean
 
@@ -99,13 +99,21 @@ export interface StaticOptions<Prefix extends string> {
     /**
      * @default true
      *
-     * Enable serving of index.html as default / route
+     * If set to true, any index.html file served at https://host.com/**\/index.html will also be served at https://host.com/**
      */
     indexHTML?: boolean
 
     /**
-     * @default false
+     * @default true
+     * @deprecated use `bunFullstack` instead
      *
+     * Enable bundling of HTML files (Bun only). Setting `bunFullstack` will override this property
+     * When true, HTML imports using Bun’s bundler, JavaScript transpiler and CSS parser. [See more](https://bun.com/docs/bundler/fullstack)
+     * When false, HTML files are served directly from disk.
+     */
+    bundleHTML?: boolean
+
+    /**
      * Enable bundling of HTML files (Bun only).
      * When true, HTML imports using Bun’s bundler, JavaScript transpiler and CSS parser. [See more](https://bun.com/docs/bundler/fullstack)
      * When false, HTML files are served directly from disk.
@@ -119,6 +127,9 @@ export interface StaticOptions<Prefix extends string> {
      */
     decodeURI?: boolean
 
+    /**
+     * specify OpenAPI spec configuration for static routes
+     */
     detail?: DocumentDecoration | ((path: string) => DocumentDecoration)
 
     /**
