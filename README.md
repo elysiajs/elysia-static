@@ -1,5 +1,5 @@
 # @elysia/static
-[Elysia](https://github.com/saltyaom/elysia) plugin for serving static files.
+[Elysia](https://github.com/elysiajs/elysia) plugin for serving static files.
 
 ## Installation
 ```bash
