@@ -1,4 +1,4 @@
-import { Elysia } from 'elysia'
+import { Elysia, NotFound } from 'elysia'
 import { staticPlugin } from '../src'
 
 import { expect, it, describe } from 'vitest'
@@ -207,8 +207,8 @@ describe('Static Plugin', () => {
         let called = false
 
         const app = new Elysia()
-            .onError(({ code }) => {
-                if (code === 'NOT_FOUND') called = true
+            .error(NotFound, () => {
+                called = true
             })
             .use(
                 staticPlugin({

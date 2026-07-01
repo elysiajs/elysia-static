@@ -1,28 +1,21 @@
 import { $ } from 'bun'
-import { build, type Options } from 'tsup'
-import { fixImportsPlugin } from 'esbuild-fix-imports-plugin'
+import { build } from 'tsdown'
 
 await $`rm -rf dist`
 
-const external = ['fast-decode-uri-component']
-
 await build({
-    entry: ['src/**/*.ts'],
-    outDir: 'dist',
-    format: ['esm', 'cjs'],
-    target: 'node20',
-    minifySyntax: true,
-    minifyWhitespace: false,
-    minifyIdentifiers: false,
-    splitting: false,
-    sourcemap: false,
-    cjsInterop: false,
-    clean: true,
-    bundle: false,
-    external,
-    esbuildPlugins: [fixImportsPlugin()]
+	outDir: 'dist',
+	entry: ['src/**/*.ts'],
+	cjsDefault: false,
+	target: 'node22',
+	format: ['esm', 'cjs'],
+	minify: false,
+	unbundle: true,
+	dts: true,
+	outExtensions(c) {
+		return {
+			dts: '.d.ts',
+			js: c.format === 'es' ? '.mjs' : '.js'
+		}
+	}
 })
-
-await $`tsc --project tsconfig.dts.json`
-
-process.exit()

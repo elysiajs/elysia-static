@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
 import { staticPlugin } from '../src/index'
-import { node } from '@elysiajs/node'
+import { node } from '@elysia/node'
 import { isBun } from '../src/utils'
 ;(async () => {
     const app = new Elysia(isBun ? {} : { adapter: node() })

@@ -1,4 +1,4 @@
-import { Elysia, ElysiaFile, NotFoundError, type Context } from 'elysia'
+import { Elysia, NotFound, type Context } from 'elysia'
 
 import fastDecodeURI from 'fast-decode-uri-component'
 
@@ -16,6 +16,7 @@ import {
 import type { StaticOptions } from './types'
 import { BunFile, HTMLBundle } from 'bun'
 import { Stats } from 'fs'
+import { MethodMap } from 'elysia/constants'
 
 interface CachedFile {
     data: Blob
@@ -46,7 +47,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     ) {
         if (!silent)
             console.warn(
-                '[@elysiajs/static] require process.getBuiltinModule. Static plugin is disabled'
+                '[@elysia/static] require process.getBuiltinModule. Static plugin is disabled'
             )
 
         return new Elysia()
@@ -84,17 +85,19 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         name: 'static',
         seed: prefix
     })
-    app.onError(() => {})
+
+    app.error(() => {})
 
     const files = (await listFiles(assetsDir)).sort((path1, path2) => {
         const isHTML1 = path1.endsWith('.html')
         const isHTML2 = path2.endsWith('.html')
+
         return +isHTML2 - +isHTML1
-    }) // prioritize mounting the html files first, since those must be added (if bunFullstack is true) whether or not we've exceeded staticLimit
+    })
+
     let staticRoutesMounted = 0
-    /** whether or not the `prefix` url (no trailing slash, unless the whole url is `/`) was mounted in the below for-loop */
     let rootPathAlreadyMounted = false
-    // mount applicable files (HTML files bundled with Bun, or all files if alwaysStatic is true) as static routes
+
     for (const absoluteFilePath of files) {
         const shouldBundleFileWithBun =
             isBun && bunFullstack && absoluteFilePath.endsWith('.html')
@@ -102,23 +105,23 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         if (
             !absoluteFilePath ||
             shouldIgnore(absoluteFilePath.replace(assetsDir, '')) ||
-            (!alwaysStatic && !shouldBundleFileWithBun) // if shouldBundleFileWithBun, we pre-bundle the HTML files and add them as routes regardless if alwaysStatic is true or not (matches current implementation)
+            (!alwaysStatic && !shouldBundleFileWithBun)
         )
             continue
 
         if (staticRoutesMounted >= staticLimit && !shouldBundleFileWithBun) {
-            // we're skipping this asset, so we'll need the wildcard route generated when alwaysStatic is false
-            alwaysStatic = false // we can't mount any more (non-bun HTML) routes
+            alwaysStatic = false
             continue
         }
         if (!(await fileExists(absoluteFilePath))) {
             if (!silent)
                 console.warn(
-                    `[@elysiajs/static] Failed to load file: ${absoluteFilePath}`
+                    `[@elysia/static] Failed to load file: ${absoluteFilePath}`
                 )
 
             return new Elysia()
         }
+
         const urlPath = getURLPath(absoluteFilePath)
         const prebundledHTML = shouldBundleFileWithBun
             ? ((await import(absoluteFilePath)).default as HTMLBundle)
@@ -142,11 +145,14 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         }
     }
 
-    // set up catch-all route for static assets
     if (
         // @ts-ignore private property
-        !(`GET_${prefix}/*` in app.routeTree) &&
-        !alwaysStatic
+        // !(`GET_${prefix}/*` in app.routeTree) &&
+        !alwaysStatic &&
+        app.history?.find(
+            ([method, path]) =>
+                MethodMap['GET'] === method && path === `${prefix}/*`
+        ) === undefined
     ) {
         mountRoute({
             urlPath: `${prefix.endsWith('/') ? prefix.slice(0, -1) : prefix}/*`,
@@ -158,12 +164,12 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                         : params['*']
                 )
         })
-        if (!rootPathAlreadyMounted) {
+
+        if (!rootPathAlreadyMounted)
             mountRoute({
                 urlPath: prefix === '' ? '/' : prefix,
                 absoluteFilePath: assetsDir
-            }) // /public/* does not catch /public (without the trailing /), so we need another route here in case it serves the top-level index.html file (funnily enough, /* captures /, so we are a bit redundant in that case)
-        }
+            })
     }
 
     function mountRoute({
@@ -178,10 +184,13 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     }) {
         app.get(
             urlPath,
+            {
+                detail: typeof detail === 'function' ? detail(urlPath) : detail
+            },
             prebundledHTML !== undefined
                 ? prebundledHTML
-                : ({ params, headers: requestHeaders, set }) => {
-                      return getFileResponse({
+                : ({ params, headers: requestHeaders, set }) =>
+                      getFileResponse({
                           absoluteFilePath:
                               typeof absoluteFilePath === 'function'
                                   ? absoluteFilePath(params)
@@ -189,13 +198,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                           requestHeaders,
                           set
                       })
-                  },
-            {
-                detail: typeof detail === 'function' ? detail(urlPath) : detail
-            }
         )
     }
-    /** Replaces assetsDir with url prefix */
+
     function getURLPath(absoluteFilePath: string) {
         let relativeFilePath = absoluteFilePath.replace(assetsDir, '')
         if (decodeURI)
@@ -222,7 +227,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             absoluteFilePath !== assetsDir &&
             !absoluteFilePath.startsWith(assetsDir + path.sep)
         )
-            throw new NotFoundError() // prevent file-traversal attacks
+            throw new NotFound() // prevent file-traversal attacks
 
         const setInitialHeaders = () => {
             for (const [headerName, headerVal] of Object.entries(
@@ -245,6 +250,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             set.headers['cache-control'] = maxAge
                 ? `${directive}, max-age=${maxAge}`
                 : directive
+
             return file.data
         }
 
@@ -259,22 +265,22 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         }
 
         let fileStat = await getFileStats(absoluteFilePath)
-        if (!fileStat) throw new NotFoundError()
+        if (!fileStat) throw new NotFound()
 
         if (fileStat.isDirectory()) {
             if (indexHTML) {
                 absoluteFilePath = path.join(absoluteFilePath, 'index.html')
                 fileStat = await getFileStats(absoluteFilePath)
             } else {
-                throw new NotFoundError()
+                throw new NotFound()
             }
         }
 
         if (shouldIgnore(absoluteFilePath.replace(assetsDir, '')))
-            throw new NotFoundError()
+            throw new NotFound()
 
         if (fileStat === null || fileStat.isDirectory()) {
-            throw new NotFoundError()
+            throw new NotFound()
         }
 
         try {
@@ -285,9 +291,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
             } else {
                 const file = getFile(absoluteFilePath)
                 const cachedFileResponse = isBun
-                    ? (file.value as BunFile) // bun does its own magic with these lazy blobs, so we don't need to eagerly load them here
+                    ? (file.value as BunFile)
                     : new Blob([await fs.readFile(absoluteFilePath)], {
-                          type: file.type // save the content-type here
+                          type: file.type
                       })
 
                 const cachedFile: CachedFile = {
@@ -295,14 +301,16 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                     stats: fileStat,
                     etag: await generateETag(file)
                 }
+
                 fileCache.set(absoluteFilePath, cachedFile)
+
                 return finalizeResponse(cachedFile)
             }
         } catch (error) {
-            if (error instanceof NotFoundError) throw error
-            if (!silent) console.error(`[@elysiajs/static]`, error)
+            if (error instanceof NotFound) throw error
+            if (!silent) console.error(`[@elysia/static]`, error)
 
-            throw new NotFoundError()
+            throw new NotFound()
         }
     }
 
