@@ -16,7 +16,6 @@ import {
 import type { StaticOptions } from './types'
 import { BunFile, HTMLBundle } from 'bun'
 import { Stats } from 'fs'
-import { MethodMap } from 'elysia/constants'
 
 interface CachedFile {
     data: Blob
@@ -146,12 +145,9 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     }
 
     if (
-        // @ts-ignore private property
-        // !(`GET_${prefix}/*` in app.routeTree) &&
         !alwaysStatic &&
-        app.history?.find(
-            ([method, path]) =>
-                MethodMap['GET'] === method && path === `${prefix}/*`
+        app.routes?.find(
+            (route) => route.method === 'GET' && route.path === `${prefix}/*`
         ) === undefined
     ) {
         mountRoute({
