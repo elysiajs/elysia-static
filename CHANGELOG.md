@@ -1,3 +1,8 @@
+
+# 2.0.0-beta.1 - 30 Jul 2026
+Change:
+- Add support for Elysia 2.0
+
 # 1.4.11 - 11 May 2026
 Bug fix:
 - [#79](https://github.com/elysiajs/elysia-static/pull/79) return conte-type headers on non-bun runtimes

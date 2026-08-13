@@ -1,6 +1,6 @@
 {
     "name": "@elysia/static",
-    "version": "2.0.0-exp.0",
+    "version": "2.0.0-beta.2",
     "description": "Elysia plugin for serving static files",
     "license": "MIT",
     "scripts": {
@@ -55,7 +55,7 @@
         "@types/fast-decode-uri-component": "^1.0.0",
         "@types/node": "^24.12.2",
         "@typescript-eslint/eslint-plugin": "^6.21.0",
-        "elysia": "^2.0.0-exp.23",
+        "elysia": "2.0.0-beta.1",
         "esbuild-fix-imports-plugin": "^1.0.23",
         "eslint": "9.6.0",
         "fast-decode-uri-component": "^1.0.1",
@@ -66,6 +66,6 @@
         "vitest": "^4.1.5"
     },
     "peerDependencies": {
-        "elysia": ">= 2.0.0-exp.23"
+        "elysia": ">= 2.0.0-beta.1"
     }
 }

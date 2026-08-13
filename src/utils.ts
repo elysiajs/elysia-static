@@ -1,6 +1,6 @@
 import type { BunFile } from 'bun'
 import { ElysiaFile, file as getElysiaFile } from 'elysia'
-import { ReadStream, Stats } from 'fs'
+import type { Stats } from 'fs'
 
 let fs: typeof import('fs/promises')
 let path: typeof import('path')

@@ -1,7 +1,5 @@
 import { Elysia, NotFound, type Context } from 'elysia'
 
-import fastDecodeURI from 'fast-decode-uri-component'
-
 import {
     LRUCache,
     fileExists,
@@ -16,7 +14,6 @@ import {
 import type { StaticOptions } from './types'
 import { BunFile, HTMLBundle } from 'bun'
 import { Stats } from 'fs'
-import { MethodMap } from 'elysia/constants'
 
 interface CachedFile {
     data: Blob
@@ -150,8 +147,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         // !(`GET_${prefix}/*` in app.routeTree) &&
         !alwaysStatic &&
         app.history?.find(
-            ([method, path]) =>
-                MethodMap['GET'] === method && path === `${prefix}/*`
+            ({ method, path }) => method === 'GET' && path === `${prefix}/*`
         ) === undefined
     ) {
         mountRoute({
@@ -160,7 +156,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
                 path.resolve(
                     assets,
                     decodeURI
-                        ? (fastDecodeURI(params['*']) ?? params['*'])
+                        ? (decodeURIComponent(params['*']) ?? params['*'])
                         : params['*']
                 )
         })
@@ -204,8 +200,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
     function getURLPath(absoluteFilePath: string) {
         let relativeFilePath = absoluteFilePath.replace(assetsDir, '')
         if (decodeURI)
-            relativeFilePath =
-                fastDecodeURI(relativeFilePath) ?? relativeFilePath
+            relativeFilePath = decodeURI(relativeFilePath) ?? relativeFilePath
 
         let urlPath = normalizePath(path.join(prefix, relativeFilePath))
 
