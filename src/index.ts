@@ -83,7 +83,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         seed: prefix
     })
 
-    app.error(() => {})
+    app.onError(() => {})
 
     const files = (await listFiles(assetsDir)).sort((path1, path2) => {
         const isHTML1 = path1.endsWith('.html')

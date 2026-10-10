@@ -3,8 +3,10 @@ import { staticPlugin } from '../src'
 
 import { expect, it, describe } from 'vitest'
 import { join, sep } from 'path'
+import { spawnSync } from 'child_process'
 
-import { req, takodachi } from './utils'
+import { LRUCache, isBun } from '../src/utils'
+import { req, takodachi, withRequest } from './utils'
 
 describe('Static Plugin', () => {
     it('should get root path', async () => {
@@ -207,7 +209,7 @@ describe('Static Plugin', () => {
         let called = false
 
         const app = new Elysia()
-            .error(NotFound, () => {
+            .onError(NotFound, () => {
                 called = true
             })
             .use(
@@ -427,13 +429,18 @@ describe('Static Plugin', () => {
                 '/public/html/index.html/'
             ]
 
-            for (const path of htmlPaths) {
-                // console.log(path)
-                const res = await app.handle(req(path))
-                await (await res.blob()).text() // make sure content is readable and does not lock server-side Response object
+            await withRequest(app, bunFullstack, async (request) => {
+                for (const path of htmlPaths) {
+                    // console.log(path)
+                    const res = await request(path)
+                    await (await res.blob()).text() // make sure content is readable and does not lock server-side Response object
 
-                expect(res.status).toBe(200)
-            }
+                    expect(res.status).toBe(200)
+                    expect(res.headers.get('content-type')).toContain(
+                        'text/html'
+                    )
+                }
+            })
         }
     )
     it.each([
@@ -460,18 +467,23 @@ describe('Static Plugin', () => {
                 '/public/html/index.html/'
             ]
 
-            for (const path of htmlPaths) {
-                // console.log(path)
-                const res = await app.handle(req(path))
-                await (await res.blob()).text() // make sure content is readable and does not lock server-side Response object
+            await withRequest(app, bunFullstack, async (request) => {
+                for (const path of htmlPaths) {
+                    // console.log(path)
+                    const res = await request(path)
+                    await (await res.blob()).text() // make sure content is readable and does not lock server-side Response object
 
-                expect(res.status).toBe(200)
-            }
-            for (const invalidPath of ['/public/html', '/public/html/']) {
-                const res = await app.handle(req(invalidPath))
+                    expect(res.status).toBe(200)
+                    expect(res.headers.get('content-type')).toContain(
+                        'text/html'
+                    )
+                }
+                for (const invalidPath of ['/public/html', '/public/html/']) {
+                    const res = await request(invalidPath)
 
-                expect(res.status).toBe(404)
-            }
+                    expect(res.status).toBe(404)
+                }
+            })
         }
     )
     it.each([
@@ -495,10 +507,15 @@ describe('Static Plugin', () => {
             await app.modules
             const htmlPaths = ['', '/', '/index.html', '/index.html/']
 
-            for (const path of htmlPaths) {
-                const res = await app.handle(req(path))
-                expect(res.status).toBe(200)
-            }
+            await withRequest(app, bunFullstack, async (request) => {
+                for (const path of htmlPaths) {
+                    const res = await request(path)
+                    expect(res.status).toBe(200)
+                    expect(res.headers.get('content-type')).toContain(
+                        'text/html'
+                    )
+                }
+            })
         }
     )
 
@@ -838,14 +855,21 @@ describe('Static Plugin', () => {
                     prevRouteCount - 1
                 ) // you may end up with a decrease of 1 when the last static route gets mounted and the two catch-all routes are no-longer needed. Bit scuffed test.
                 prevRouteCount = app.routes.length
-                for (const path of allPaths) {
-                    const res = await app.handle(req(path))
-                    expect(res.status).toBe(200)
-                }
-                for (const nonExistentPath of ['/', 'hi/ok', 'owo', '///']) {
-                    const res = await app.handle(req(nonExistentPath))
-                    expect(res.status).toBe(404)
-                }
+                await withRequest(app, bunFullstack, async (request) => {
+                    for (const path of allPaths) {
+                        const res = await request(path)
+                        expect(res.status).toBe(200)
+                    }
+                    for (const nonExistentPath of [
+                        '/',
+                        'hi/ok',
+                        'owo',
+                        '///'
+                    ]) {
+                        const res = await request(nonExistentPath)
+                        expect(res.status).toBe(404)
+                    }
+                })
             }
         )
     })
@@ -921,5 +945,42 @@ describe('Static Plugin', () => {
         const res = await app.handle(request)
         expect(res.status).toBe(200)
         expect(res.headers.get('custom')).toBe('hi')
+    })
+    it('lets the process exit after serving a file', () => {
+        const fixture = 'test/fixtures/serve-once.mts'
+        const { status, signal, stdout } = spawnSync(
+            process.execPath,
+            isBun ? [fixture] : ['--import', 'tsx', fixture],
+            { encoding: 'utf8', timeout: 5000 }
+        )
+
+        // a timer holding the process open ends in the timeout's SIGTERM
+        expect({ status, signal, stdout }).toEqual({
+            status: 0,
+            signal: null,
+            stdout: '200\n'
+        })
+    }, 10_000)
+    it('sweeps the file cache every ttl seconds without holding the process', () => {
+        const realSetInterval = globalThis.setInterval
+        const sweeps: [number | undefined, ReturnType<typeof setInterval>][] =
+            []
+        globalThis.setInterval = ((handler: () => void, delay?: number) => {
+            const timer = realSetInterval(handler, delay)
+            sweeps.push([delay, timer])
+
+            return timer
+        }) as typeof setInterval
+
+        const cache = new LRUCache<string, number>(250, 2)
+        try {
+            cache.set('a', 1)
+
+            expect(sweeps.map(([delay]) => delay)).toEqual([2000])
+            expect(sweeps[0][1].hasRef()).toBe(false)
+        } finally {
+            globalThis.setInterval = realSetInterval
+            cache[Symbol.dispose]()
+        }
     })
 })

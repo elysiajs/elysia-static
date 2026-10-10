@@ -10,13 +10,13 @@ export const isBun = typeof Bun !== 'undefined' && !!Bun.file
 export function getBuiltinModule() {
     if (!fs) fs = process.getBuiltinModule('fs/promises')
     if (!typeof fs) {
-        console.warn('@elysiajs/static require fs/promises to be available.')
+        console.warn('@elysia/static require fs/promises to be available.')
         return
     }
 
     if (!path) path = process.getBuiltinModule('path')
     if (!path) {
-        console.warn('@elysiajs/static require path to be available.')
+        console.warn('@elysia/static require path to be available.')
         return
     }
 
@@ -73,7 +73,7 @@ export function getFileStats(path: string) {
 
 export class LRUCache<K, V> {
     private map = new Map<K, [V, number]>()
-    private interval: number | undefined
+    private interval: ReturnType<typeof setInterval> | undefined
 
     constructor(
         private readonly max = 250,
@@ -93,12 +93,18 @@ export class LRUCache<K, V> {
     }
 
     set(key: K, value: V): void {
-        if (!this.interval)
+        if (!this.interval) {
+            // ttl is in seconds
             this.interval = setInterval(() => {
                 const now = Date.now()
                 for (const [key, entry] of this.map)
                     if (entry[1] <= now) this.map.delete(key)
-            }, this.ttl) as unknown as number
+            }, this.ttl * 1000)
+
+            // a cache sweep must not keep the process alive. Optional: a
+            // runtime without timer objects returns a number
+            this.interval.unref?.()
+        }
 
         if (this.map.has(key)) this.map.delete(key)
         else if (this.map.size >= this.max) {
