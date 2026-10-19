@@ -98,7 +98,7 @@ describe('Static Plugin', () => {
     it('ignore string pattern', async () => {
         const app = new Elysia().use(
             staticPlugin({
-                ignorePatterns: [`public${sep}takodachi.png`]
+                ignorePatterns: [`${sep}takodachi.png`]
             })
         )
 
@@ -110,7 +110,7 @@ describe('Static Plugin', () => {
     it('ignore string pattern (when alwaysStatic is true)', async () => {
         const app = new Elysia().use(
             staticPlugin({
-                ignorePatterns: [`public${sep}takodachi.png`],
+                ignorePatterns: [`${sep}takodachi.png`],
                 alwaysStatic: true
             })
         )
@@ -120,6 +120,18 @@ describe('Static Plugin', () => {
         const res = await app.handle(req('/public/takodachi.png'))
         expect(res.status).toBe(404)
     })
+
+    it.each([{ alwaysStatic: false }, { alwaysStatic: true }])(
+        'ignore .env by default (alwaysStatic: $alwaysStatic)',
+        async ({ alwaysStatic }) => {
+            const app = new Elysia().use(staticPlugin({ alwaysStatic }))
+
+            await app.modules
+
+            const res = await app.handle(req('/public/.env'))
+            expect(res.status).toBe(404)
+        }
+    )
 
     it('ignore regex pattern', async () => {
         const app = new Elysia().use(

@@ -73,7 +73,7 @@ export async function staticPlugin<const Prefix extends string = '/prefix'>({
         : (relativeFilePathFromAssetDir: string) => {
               return ignorePatterns?.find((pattern) =>
                   typeof pattern === 'string'
-                      ? pattern.includes(relativeFilePathFromAssetDir)
+                      ? relativeFilePathFromAssetDir.includes(pattern)
                       : pattern.test(relativeFilePathFromAssetDir)
               )
           }
