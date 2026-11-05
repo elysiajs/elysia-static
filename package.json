@@ -1,6 +1,6 @@
 {
     "name": "@elysia/static",
-    "version": "1.4.11",
+    "version": "1.4.12",
     "description": "Elysia plugin for serving static files",
     "license": "MIT",
     "scripts": {

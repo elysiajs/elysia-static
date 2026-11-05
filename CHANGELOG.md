@@ -1,3 +1,10 @@
+# 1.4.12 - 5 Nov 2026
+Security:
+- prevent string `ignorePatterns`, including the default `.env` and `.git` exclusions, from serving matching files
+
+Breaking Change:
+- string `ignorePatterns` now match the asset-relative file path; patterns that relied on containing the entire file path must be updated
+
 # 1.4.11 - 11 May 2026
 Bug fix:
 - [#79](https://github.com/elysiajs/elysia-static/pull/79) return conte-type headers on non-bun runtimes
