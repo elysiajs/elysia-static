@@ -1,3 +1,9 @@
+# 2.0.0-rc.1 - 5 Nov 2026
+Security:
+- prevent string `ignorePatterns`, including the default `.env` and `.git` exclusions, from serving matching files
+
+Breaking Change:
+- string `ignorePatterns` now match the asset-relative file path; patterns that relied on containing the entire file path must be updated
 
 # 2.0.0-rc.0 - 20 Oct 2026
 Change:

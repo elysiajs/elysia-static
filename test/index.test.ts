@@ -4,6 +4,8 @@ import { staticPlugin } from '../src'
 import { expect, it, describe } from 'vitest'
 import { join, sep } from 'path'
 import { spawnSync } from 'child_process'
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises'
+import { tmpdir } from 'os'
 
 import { LRUCache, isBun } from '../src/utils'
 import { req, takodachi, withRequest } from './utils'
@@ -121,17 +123,32 @@ describe('Static Plugin', () => {
         expect(res.status).toBe(404)
     })
 
-    it.each([{ alwaysStatic: false }, { alwaysStatic: true }])(
-        'ignore .env by default (alwaysStatic: $alwaysStatic)',
-        async ({ alwaysStatic }) => {
-            const app = new Elysia().use(staticPlugin({ alwaysStatic }))
+    for (const alwaysStatic of [true, false]) {
+        it(`ignore sensitive files by default when alwaysStatic is ${alwaysStatic}`, async () => {
+            const assets = await mkdtemp(join(tmpdir(), 'elysia-static-'))
 
-            await app.modules
+            try {
+                await writeFile(join(assets, '.env'), 'SECRET=test')
+                await mkdir(join(assets, '.git'))
+                await writeFile(join(assets, '.git', 'config'), 'TOKEN=test')
 
-            const res = await app.handle(req('/public/.env'))
-            expect(res.status).toBe(404)
-        }
-    )
+                const app = new Elysia().use(
+                    staticPlugin({ assets, alwaysStatic })
+                )
+
+                await app.modules
+
+                const responses = await Promise.all([
+                    app.handle(req('/public/.env')),
+                    app.handle(req('/public/.git/config'))
+                ])
+
+                expect(responses.map(({ status }) => status)).toEqual([404, 404])
+            } finally {
+                await rm(assets, { recursive: true, force: true })
+            }
+        })
+    }
 
     it('ignore regex pattern', async () => {
         const app = new Elysia().use(

@@ -28,10 +28,10 @@ export interface StaticOptions<Prefix extends string> {
      */
     alwaysStatic?: boolean
     /**
-     * @default [] `Array<string | RegExp>`
+     * @default ['.DS_Store', '.git', '.env']
      *
      * Array of file to ignore publication.
-     * If one of the patters is matched,
+     * If one of the patterns is matched,
      * file will not be exposed.
      */
     ignorePatterns?: Array<string | RegExp>
