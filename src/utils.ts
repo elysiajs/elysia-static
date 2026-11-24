@@ -93,12 +93,19 @@ export class LRUCache<K, V> {
     }
 
     set(key: K, value: V): void {
-        if (!this.interval)
-            this.interval = setInterval(() => {
+        if (!this.interval) {
+            const interval = setInterval(() => {
                 const now = Date.now()
                 for (const [key, entry] of this.map)
                     if (entry[1] <= now) this.map.delete(key)
-            }, this.ttl) as unknown as number
+            }, this.ttl)
+
+            // keep the cache eviction pass from holding the event loop open
+            if (typeof interval === 'object' && interval !== null)
+                (interval as { unref?: () => void }).unref?.()
+
+            this.interval = interval as unknown as number
+        }
 
         if (this.map.has(key)) this.map.delete(key)
         else if (this.map.size >= this.max) {
